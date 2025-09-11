@@ -12,6 +12,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Función para obtener la URL base dinámica
+function getBaseUrl(req) {
+    if (isProduction) {
+        // En producción, usar el header host o la variable de entorno
+        const host = req.get('host');
+        return `https://${host}`;
+    } else {
+        // En desarrollo, usar localhost
+        return `http://localhost:${PORT}`;
+    }
+}
+
 // Configuración de seguridad para producción
 if (isProduction) {
     app.set('trust proxy', 1);
@@ -206,7 +218,7 @@ app.post('/api/shorten', (req, res) => {
                 // URL ya existe, devolver el código existente
                 return res.json({
                     success: true,
-                    shortUrl: `https://acortador-de-url-alpha.vercel.app/${row.short_code}`,
+                    shortUrl: `${getBaseUrl(req)}/${row.short_code}`,
                     shortCode: row.short_code,
                     originalUrl: row.original_url
                 });
@@ -228,7 +240,7 @@ app.post('/api/shorten', (req, res) => {
                 
                 res.json({
                     success: true,
-                    shortUrl: `https://acortador-de-url-alpha.vercel.app/${shortCode}`,
+                    shortUrl: `${getBaseUrl(req)}/${shortCode}`,
                     shortCode: shortCode,
                     originalUrl: url
                 });
@@ -242,7 +254,7 @@ app.post('/api/shorten', (req, res) => {
         
         res.json({
             success: true,
-            shortUrl: `https://acortador-de-url-alpha.vercel.app/${shortCode}`,
+            shortUrl: `${getBaseUrl(req)}/${shortCode}`,
             shortCode: shortCode,
             originalUrl: url,
             temporary: true // Indicar que es temporal
@@ -360,7 +372,7 @@ app.get('/api/qr/:shortCode', async (req, res) => {
     
     try {
         // Generar la URL corta
-        const shortUrl = `https://acortador-de-url-alpha.vercel.app/${shortCode}`;
+        const shortUrl = `${getBaseUrl(req)}/${shortCode}`;
         
         // Generar código QR como Data URL (base64)
         const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, {
