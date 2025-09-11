@@ -95,9 +95,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Configurar la base de datos SQLite
-const db = new sqlite3.Database('./urls.db', (err) => {
+const dbPath = process.env.NODE_ENV === 'production' ? '/tmp/urls.db' : './urls.db';
+const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-        console.error('Error al conectar con la base de datos:', err.message);
+        console.error('❌ Error al conectar con la base de datos:', err.message);
     } else {
         console.log('Conectado a la base de datos SQLite.');
         // Crear la tabla si no existe
@@ -183,12 +184,23 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Ruta de debug para verificar que el servidor funciona
+app.get('/api/debug', (req, res) => {
+    res.json({
+        status: 'OK',
+        environment: process.env.NODE_ENV || 'development',
+        database: dbPath,
+        timestamp: new Date().toISOString(),
+        host: req.get('host')
+    });
+});
+
 // API: Acortar URL
 app.post('/api/shorten', (req, res) => {
     const { url } = req.body;
     const userId = (auth0ConfigValid && req.oidc && req.oidc.isAuthenticated()) ? req.oidc.user.sub : null;
     
-    console.log('📝 Acortar URL request:', { url, userId, auth0ConfigValid }); // Debug
+    console.log('� [SHORTEN] Iniciando request:', { url, userId, environment: process.env.NODE_ENV }); // Debug
     
     if (!url) {
         return res.status(400).json({ error: 'URL es requerida' });
