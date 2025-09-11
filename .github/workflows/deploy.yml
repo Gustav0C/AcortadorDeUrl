@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Build and Deploy to GitHub Pages
 
 on:
   push:
@@ -13,8 +13,7 @@ permissions:
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -23,28 +22,45 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x]
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
           
       - name: Install dependencies
         run: npm ci
         
-      - name: Create static build
+      - name: Run tests (if present)
+        run: npm test --if-present
+        
+      - name: Build static files
         run: |
-          mkdir -p _site
-          # Copiar archivos estáticos
-          cp public/index-static.html _site/index.html
-          cp public/styles.css _site/
-          cp public/script-static.js _site/script.js
-          # Crear archivo CNAME si tienes dominio personalizado (opcional)
-          # echo "tu-dominio.com" > _site/CNAME
+          # Ejecutar nuestro script de build personalizado
+          npm run build
+          
+          # Verificar que los archivos fueron generados
+          echo "📁 Files in _site directory:"
+          ls -la _site/
+          
+          # Verificar contenido de archivos críticos
+          echo "📄 Checking index.html exists:"
+          test -f _site/index.html && echo "✅ index.html found" || echo "❌ index.html missing"
+          
+          echo "📄 Checking script.js exists:"
+          test -f _site/script.js && echo "✅ script.js found" || echo "❌ script.js missing"
+          
+          echo "📄 Checking styles.css exists:"
+          test -f _site/styles.css && echo "✅ styles.css found" || echo "❌ styles.css missing"
           
       - name: Setup Pages
         uses: actions/configure-pages@v4

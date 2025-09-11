@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gustav0c.github.io/AcortadorDeUrl/sitemap.xml

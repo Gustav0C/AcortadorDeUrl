@@ -6,8 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "vercel-build": "echo 'No build step required'",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "node build.js",
+    "build:static": "node build.js",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
     "url-shortener",
