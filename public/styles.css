@@ -711,14 +711,20 @@ body {
     border-radius: 15px;
     color: white;
     font-weight: 600;
-    transform: translateX(400px);
-    transition: transform 0.4s ease;
+    transform: translateX(500px);
+    opacity: 0; /* Añadido para asegurar ocultación completa */
+    visibility: hidden; /* Añadido para asegurar ocultación completa */
+    transition: transform 0.4s ease, opacity 0.4s ease, visibility 0.4s ease;
     z-index: 1000;
     backdrop-filter: blur(10px);
+    max-width: 400px;
+    word-wrap: break-word;
 }
 
 .notification.show {
     transform: translateX(0);
+    opacity: 1; /* Visible cuando se muestra */
+    visibility: visible; /* Visible cuando se muestra */
 }
 
 .notification.success {

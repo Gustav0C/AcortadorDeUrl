@@ -352,45 +352,38 @@ app.delete('/api/urls/:shortCode', (req, res) => {
 app.get('/api/qr/:shortCode', async (req, res) => {
     const { shortCode } = req.params;
     
+    console.log('🎯 QR request para shortCode:', shortCode);
+    
     if (!shortCode) {
         return res.status(400).json({ error: 'Código corto es requerido' });
     }
     
-    // Verificar si la URL existe
-    db.get('SELECT * FROM urls WHERE short_code = ?', [shortCode], async (err, row) => {
-        if (err) {
-            return res.status(500).json({ error: 'Error de base de datos' });
-        }
+    try {
+        // Generar la URL corta
+        const shortUrl = `http://localhost:${PORT}/${shortCode}`;
         
-        if (!row) {
-            return res.status(404).json({ error: 'URL no encontrada' });
-        }
+        // Generar código QR como Data URL (base64)
+        const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, {
+            width: 200,
+            margin: 2,
+            color: {
+                dark: '#667eea',
+                light: '#FFFFFF'
+            }
+        });
         
-        try {
-            const shortUrl = `http://localhost:${PORT}/${shortCode}`;
-            
-            // Generar código QR como Data URL (base64)
-            const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, {
-                width: 200,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
-            });
-            
-            res.json({
-                success: true,
-                shortCode: shortCode,
-                shortUrl: shortUrl,
-                originalUrl: row.original_url,
-                qrCode: qrCodeDataUrl
-            });
-        } catch (qrError) {
-            console.error('Error al generar código QR:', qrError);
-            res.status(500).json({ error: 'Error al generar código QR' });
-        }
-    });
+        console.log('✅ QR generado exitosamente para:', shortUrl);
+        
+        res.json({
+            success: true,
+            shortCode: shortCode,
+            shortUrl: shortUrl,
+            qrCode: qrCodeDataUrl
+        });
+    } catch (error) {
+        console.error('❌ Error al generar QR:', error);
+        res.status(500).json({ error: 'Error al generar código QR' });
+    }
 });
 
 // Redirección: Cuando alguien accede a la URL corta

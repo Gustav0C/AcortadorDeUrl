@@ -89,14 +89,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Función para mostrar notificaciones
+// Variable para evitar notificaciones duplicadas
+let currentNotificationTimeout = null;
+
 function showNotification(message, type = 'success') {
+    console.log('📢 Showing notification:', message, 'Type:', type); // Debug
     const notification = document.getElementById('notification');
+    
+    // Cancelar el timeout anterior si existe
+    if (currentNotificationTimeout) {
+        clearTimeout(currentNotificationTimeout);
+        currentNotificationTimeout = null;
+    }
+    
     notification.textContent = message;
     notification.className = `notification ${type}`;
     notification.classList.add('show');
     
-    setTimeout(() => {
+    currentNotificationTimeout = setTimeout(() => {
+        console.log('⏰ Hiding notification after 3s:', message); // Debug
         notification.classList.remove('show');
+        currentNotificationTimeout = null;
     }, 3000);
 }
 
@@ -106,6 +119,12 @@ async function shortenUrl() {
     const shortenBtn = document.getElementById('shortenBtn');
     const inputSection = document.getElementById('inputSection');
     const resultSection = document.getElementById('resultSection');
+    
+    // Evitar doble ejecución
+    if (shortenBtn.disabled) {
+        console.log('🚫 shortenUrl ya en ejecución, ignorando'); // Debug
+        return;
+    }
     
     const url = urlInput.value.trim();
     
@@ -581,7 +600,7 @@ style.textContent = `
     .qr-modal-image {
         max-width: 100%;
         width: 250px;
-        border: 3px solid #17a2b8;
+        border: 3px solid #764ba2;
         border-radius: 15px;
         padding: 15px;
         background: white;
