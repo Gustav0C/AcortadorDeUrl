@@ -1,26 +1,52 @@
 # 🔗 Fis Url - Acortador de URLs
 
-Un acortador de URLs moderno, elegante y completamente funcional con autenti## 🌐 Despliegue
+Un acortador de URLs moderno, elegante y completamente funcional con autenticación,## 🚀 Deployment en Vercel
 
-### GitHub Pages (Versión Demo)
-Este proyecto incluye una versión estática optimizada para GitHub Pages:
+Este proyecto está optimizado para desplegarse en **Vercel**:
 
-- **URL demo**: `https://tu-usuario.github.io/fis-url/`
-- **Características**: Acortamiento local, QR codes, historial en localStorage
-- **Despliegue**: Automático con GitHub Actions en cada push a `main`
+### Deploy automático
+1. **Fork** este repositorio en tu GitHub
+2. Ve a [Vercel](https://vercel.com) y conecta tu cuenta de GitHub
+3. Importa el proyecto y configura las variables de entorno:
+   ```
+   AUTH0_SECRET=tu-secret-largo-y-aleatorio
+   AUTH0_CLIENT_ID=tu-client-id-de-auth0
+   AUTH0_CLIENT_SECRET=tu-client-secret-de-auth0
+   AUTH0_ISSUER_BASE_URL=https://tu-tenant.auth0.com
+   ```
+4. En Auth0, actualiza las URLs permitidas con tu dominio de Vercel:
+   - **Allowed Callback URLs**: `https://tu-app.vercel.app/callback`
+   - **Allowed Logout URLs**: `https://tu-app.vercel.app`
+   - **Allowed Web Origins**: `https://tu-app.vercel.app`
 
-### Versión Completa (Backend)
-Para todas las funcionalidades (Auth0, base de datos persistente), despliega en:
+### Deploy manual
+```bash
+npm install -g vercel
+vercel --prod
+```
 
-- **Railway** (recomendado para backend)
-- **Heroku** 
-- **Render**
+> **Nota**: El proyecto incluye `vercel.json` con la configuración necesaria para el deployment.
 
-El workflow de GitHub Actions despliega automáticamente la versión demo estática.tadísticas y generación de códigos QR.
+## 🔌 API Endpoints
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/shorten` | Acortar URL (requiere JSON: {url: "..."}) |
+| `GET` | `/api/urls` | Listar URLs del usuario autenticado |
+| `DELETE` | `/api/urls/:code` | Eliminar URL específica |
+| `GET` | `/api/qr/:code` | Generar código QR para URL |
+| `GET` | `/api/stats/:code` | Estadísticas de clicks de la URL |
+| `GET` | `/api/user` | Información del usuario autenticado |
+| `GET` | `/login` | Iniciar sesión con Auth0 |
+| `GET` | `/logout` | Cerrar sesión |
+| `GET` | `/:code` | Redireccionar a URL original |cas y generación de códigos QR.
 
 ![Fis Url](https://img.shields.io/badge/Version-1.0.0-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![License](https://img.shields.io/badge/License-ISC-yellow.svg)
+
+## 🌐 **Demo en vivo**
+🚀 **[Ver demo](https://acortador-de-url-alpha.vercel.app)**
 
 ## ✨ Características
 
@@ -32,7 +58,7 @@ El workflow de GitHub Actions despliega automáticamente la versión demo estát
 - 🗑️ **Gestión de enlaces**: Eliminar URLs creadas
 - 🎨 **UI moderna**: Interfaz minimalista, responsive y con animaciones
 - 🔒 **Seguro**: Headers de seguridad y validación de URLs
-- 💾 **Base de datos local**: SQLite para funcionamiento completamente independiente
+- 💾 **Base de datos**: SQLite para funcionamiento independiente
 
 ## 🖥️ Vista previa
 
@@ -58,8 +84,13 @@ El workflow de GitHub Actions despliega automáticamente la versión demo estát
 
 1. **Clona el repositorio**
    ```bash
-   git clone https://github.com/tu-usuario/fis-url.git
-   cd fis-url
+   git clone https://github.com/tu-usuario/AcortadorDeUrl.git
+   cd AcortadorDeUrl
+   ```
+
+2. **Instala las dependencias**
+   ```bash
+   npm install
    ```
 
 3. **Configura las variables de entorno**
@@ -73,10 +104,7 @@ El workflow de GitHub Actions despliega automáticamente la versión demo estát
    AUTH0_CLIENT_SECRET='tu-client-secret-de-auth0'
    AUTH0_ISSUER_BASE_URL='https://tu-tenant.auth0.com'
    
-   # Base de datos
-   DB_PATH='./urls.db'
-   
-   # Puerto del servidor
+   # Puerto del servidor (opcional)
    PORT=3000
    ```
 
@@ -105,96 +133,49 @@ Sin Auth0, la aplicación funciona perfectamente en modo anónimo.
 
 ## 🛠️ Tecnologías utilizadas
 
-- **Backend**: Node.js, Express.js
-- **Base de datos**: SQLite3
-- **Autenticación**: Auth0 con Google OAuth
+- **Backend**: Node.js, Express.js, express-openid-connect
+- **Base de datos**: SQLite3 (compatible con Vercel)
+- **Autenticación**: Auth0 (Google OAuth)
 - **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
 - **Generación de QR**: qrcode library
-- **Generación de IDs**: shortid library
+- **Deployment**: Vercel con integración continua
+- **Otras**: ShortID, dotenv, CORS
 
 ## 📁 Estructura del proyecto
 
 ```
-fis-url/
-├── public/              # Archivos estáticos del frontend
-│   ├── index.html       # Página principal
-│   ├── styles.css       # Estilos CSS
-│   └── script.js        # Lógica JavaScript del frontend
-├── server.js            # Servidor principal de Express
-├── package.json         # Dependencias y scripts de npm
-├── .env.example         # Ejemplo de variables de entorno
-└── README.md           # Este archivo
-```
-
-## � Despliegue
-
-Este proyecto está configurado para desplegarse automáticamente usando GitHub Actions en plataformas como:
-
-- **Vercel** (recomendado)
-- **Netlify**
-- **Railway**
-- **Heroku**
-
-El workflow de GitHub Actions se ejecuta automáticamente en cada push a la rama `main`.
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia ISC. Ver el archivo `LICENSE` para más detalles.
-
-## 🤝 Contribuciones
-
-Las contribuciones son bienvenidas. Para cambios importantes, por favor abre un issue primero para discutir qué te gustaría cambiar.
-
-## 📞 Soporte
-
-Si tienes algún problema o pregunta, por favor abre un [issue](https://github.com/tu-usuario/fis-url/issues) en GitHub.
-
----
-
-Hecho con ❤️ por [Tu Nombre]
-- ✅ Generar códigos QR
-
-#### Con autenticación
-- ✅ Todas las funcionalidades anteriores
-- ✅ URLs privadas por usuario
-- ✅ Solo puedes ver y eliminar tus propias URLs
-- ✅ Perfil de usuario visible
-- ✅ Historial personalizado
-
-## 📁 Estructura del proyecto
-
-```
-fis-url/
+AcortadorDeUrl/
 ├── package.json          # Configuración de dependencias y scripts
 ├── server.js             # Servidor principal con Auth0
+├── vercel.json           # Configuración de deployment en Vercel
 ├── .env                  # Variables de entorno (Auth0 config)
 ├── urls.db              # Base de datos SQLite (se crea automáticamente)
 ├── README.md            # Este archivo
 └── public/              # Frontend
     ├── index.html       # Interfaz principal con autenticación
     ├── styles.css       # Estilos CSS modernos
-    └── script.js        # JavaScript con Auth0 integration
+    ├── script.js        # JavaScript con Auth0 integration
+    └── logo.png         # Logo del proyecto
 ```
 
-## 🔌 API Endpoints
+## 🤝 Contribuciones
 
-- `POST /api/shorten` - Acortar URL
-- `GET /api/urls` - Listar URLs del usuario
-- `DELETE /api/urls/:code` - Eliminar URL
-- `GET /api/qr/:code` - Generar código QR
-- `GET /api/stats/:code` - Estadísticas de la URL
-- `GET /api/user` - Información del usuario autenticado
-- `GET /login` - Iniciar sesión con Auth0
-- `GET /logout` - Cerrar sesión
-- `GET /:code` - Redireccionar a URL original
+Las contribuciones son bienvenidas. Para cambios importantes:
 
-## 🛠️ Tecnologías utilizadas
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
-- **Backend:** Node.js, Express.js, express-openid-connect
-- **Base de datos:** SQLite
-- **Autenticación:** Auth0
-- **Frontend:** HTML5, CSS3, JavaScript (Vanilla)
-- **Otras:** QRCode.js, ShortID, dotenv
+## 📞 Soporte
+
+Si tienes problemas:
+- 🐛 [Reporta bugs](https://github.com/tu-usuario/AcortadorDeUrl/issues)
+- 💡 [Solicita features](https://github.com/tu-usuario/AcortadorDeUrl/issues)
+- 📧 Contacto directo: Gcanales58@gmail.com
+
+---
 
 ## 📝 Licencia
 
@@ -239,59 +220,16 @@ CREATE TABLE urls (
 - ✅ Manejo de errores
 - ✅ Variables de entorno para secrets
 
-## 🔄 Personalización
-
-### Cambiar el puerto
-Edita el archivo `.env`:
-```env
-PORT=3000
-```
-
-### Personalizar códigos cortos
-El proyecto usa `shortid` para generar códigos únicos. Puedes cambiar esto en `server.js`:
-```javascript
-const shortCode = shortid.generate();
-```
-
-## � Solución de problemas
-
-### Error de Auth0
-- Verifica que las URLs en Auth0 coincidan exactamente
-- Asegúrate de que todas las variables de `.env` estén configuradas
-- Revisa que el `AUTH0_SECRET` tenga al menos 32 caracteres
-
-### Base de datos
-- Si hay problemas, elimina `urls.db` y reinicia el servidor
-- La base de datos se recrea automáticamente
-
-### Puerto ocupado
-- Cambia el puerto en `.env` o cierra la aplicación que usa el puerto 3000
-
-### El servidor no inicia
-- Verifica que Node.js esté instalado: `node --version`
-- Verifica que las dependencias estén instaladas: `npm install`
-
-### Error de base de datos
-- Elimina el archivo `urls.db` y reinicia el servidor
-- Se creará una nueva base de datos automáticamente
-
-### URLs no funcionan
-- Verifica que las URLs tengan `http://` o `https://`
-- El validador requiere URLs completas y válidas
-
 ## 🚀 Próximas mejoras
 
 - [ ] Códigos personalizados
-- [ ] Fechas de expiración
+- [ ] Fechas de expiración  
 - [ ] Exportar estadísticas
-- [ ] Temas de interfaz
-- [ ] API REST completa
-- [ ] Autenticación (opcional)
-
-## 📄 Licencia
-
-ISC License - Proyecto de código abierto para uso personal y educativo.
+- [ ] Analítica avanzada
+- [ ] Temas personalizables
 
 ---
 
-¡Disfruta tu acortador de URLs local! 🎉
+⭐ **¿Te gustó el proyecto?** ¡Dale una estrella en GitHub!
+
+Desarrollado con ❤️ usando Node.js y Auth0
