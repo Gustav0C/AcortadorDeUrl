@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fis Url - GitHub Pages</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="brand">
+                    <h1><i class="fas fa-link"></i> Fis Url</h1>
+                    <p>Acorta tus URLs de forma simple y elegante</p>
+                    <div class="github-badge">
+                        <i class="fab fa-github"></i> 
+                        <span>Versión GitHub Pages</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Info Banner -->
+        <div class="info-banner">
+            <i class="fas fa-info-circle"></i>
+            <span>Esta es una versión de demostración. Las URLs se guardan solo en tu navegador.</span>
+            <a href="https://github.com/tu-usuario/fis-url" target="_blank" class="github-link">
+                <i class="fab fa-github"></i> Ver código completo
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Input Section -->
+            <section id="inputSection" class="input-section">
+                <div class="input-container">
+                    <input type="url" id="urlInput" placeholder="Pega aquí tu URL..." class="url-input">
+                    <button id="shortenBtn" onclick="shortenUrl()" class="shorten-btn">
+                        <i class="fas fa-compress-alt"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Result Section -->
+            <section id="resultSection" class="result-section hidden">
+                <div class="result-container">
+                    <div class="result-main">
+                        <div class="short-url-display">
+                            <span id="shortUrl" class="short-url-text"></span>
+                            <div class="action-buttons">
+                                <button onclick="copyToClipboard()" class="copy-btn" title="Copiar">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                                <button onclick="generateQR()" class="qr-btn" title="Generar QR">
+                                    <i class="fas fa-qrcode"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="stats-display">
+                            <span class="stats-text">Creado: <span id="createdDate"></span></span>
+                        </div>
+                    </div>
+                    
+                    <div id="qrSection" class="qr-section hidden">
+                        <div class="qr-container">
+                            <div id="qrCode" class="qr-code"></div>
+                            <button onclick="downloadQR()" class="download-btn">
+                                <i class="fas fa-download"></i> Descargar QR
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button onclick="resetForm()" class="new-url-btn">
+                        <i class="fas fa-plus"></i> Nueva URL
+                    </button>
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section class="history-section">
+                <div class="history-toggle">
+                    <h3><i class="fas fa-history"></i> Historial Local</h3>
+                    <button onclick="toggleHistory()" class="toggle-btn" id="historyToggleBtn">
+                        <i class="fas fa-eye"></i> Mostrar
+                    </button>
+                </div>
+                
+                <div id="historyContent" class="history-content hidden">
+                    <div id="urlsList" class="urls-list">
+                        <!-- URLs se cargan dinámicamente -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- GitHub Pages Info -->
+            <section class="github-info">
+                <div class="info-card">
+                    <h3><i class="fab fa-github"></i> Versión Completa</h3>
+                    <p>Esta es una versión de demostración que funciona solo en tu navegador.</p>
+                    <div class="features-list">
+                        <div class="feature-item">
+                            <i class="fas fa-check"></i>
+                            <span>Acortamiento de URLs</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check"></i>
+                            <span>Códigos QR</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check"></i>
+                            <span>Historial local</span>
+                        </div>
+                    </div>
+                    <p><strong>Para la versión completa con:</strong></p>
+                    <div class="features-list">
+                        <div class="feature-item premium">
+                            <i class="fas fa-star"></i>
+                            <span>Autenticación con Auth0</span>
+                        </div>
+                        <div class="feature-item premium">
+                            <i class="fas fa-star"></i>
+                            <span>Base de datos persistente</span>
+                        </div>
+                        <div class="feature-item premium">
+                            <i class="fas fa-star"></i>
+                            <span>Estadísticas avanzadas</span>
+                        </div>
+                    </div>
+                    <a href="https://github.com/tu-usuario/fis-url" target="_blank" class="github-btn">
+                        <i class="fab fa-github"></i> Ver en GitHub
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="script-static.js"></script>
+</body>
+</html>

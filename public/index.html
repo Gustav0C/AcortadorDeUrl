@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fis Url</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="brand">
+                    <h1><i class="fas fa-link"></i> Fis Url</h1>
+                    <p>Acorta tus URLs de forma simple y elegante</p>
+                </div>
+                <div class="auth-section" id="authSection">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Input Section -->
+            <section id="inputSection" class="input-section">
+                <div class="input-container">
+                    <input type="url" id="urlInput" placeholder="Pega aquí tu URL..." class="url-input">
+                    <button id="shortenBtn" onclick="shortenUrl()" class="shorten-btn">
+                        <i class="fas fa-compress-alt"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Result Section -->
+            <section id="resultSection" class="result-section hidden">
+                <div class="result-container">
+                    <div class="result-main">
+                        <div class="short-url-display">
+                            <span id="shortUrl" class="short-url-text"></span>
+                            <div class="action-buttons">
+                                <button onclick="copyToClipboard()" class="copy-btn" title="Copiar">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                                <button onclick="generateQR()" class="qr-btn" title="Generar QR">
+                                    <i class="fas fa-qrcode"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button onclick="createAnother()" class="new-url-btn">
+                            <i class="fas fa-plus"></i> Crear otra
+                        </button>
+                    </div>
+                    
+                    <!-- QR Section -->
+                    <div id="qrSection" class="qr-section hidden">
+                        <div class="qr-container">
+                            <img id="qrImage" alt="Código QR" class="qr-image" />
+                            <button onclick="downloadQR()" class="download-btn">
+                                <i class="fas fa-download"></i> Descargar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Login Promotion for Anonymous Users -->
+            <section id="loginPromotion" class="login-promotion hidden">
+                <div class="promo-card">
+                    <div class="promo-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="promo-content">
+                        <h3>¡Obtén más beneficios!</h3>
+                        <p>Inicia sesión para:</p>
+                        <ul>
+                            <li><i class="fas fa-history"></i> Guardar tu historial de URLs</li>
+                            <li><i class="fas fa-chart-bar"></i> Ver estadísticas detalladas</li>
+                            <li><i class="fas fa-edit"></i> Gestionar y eliminar tus URLs</li>
+                            <li><i class="fas fa-cloud"></i> Acceder desde cualquier dispositivo</li>
+                        </ul>
+                        <button onclick="window.location.href='/login'" class="promo-login-btn">
+                            <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History Toggle -->
+            <div class="history-toggle">
+                <button onclick="toggleHistory()" class="toggle-btn">
+                    <i class="fas fa-history"></i> Ver historial
+                </button>
+            </div>
+
+            <!-- History Section -->
+            <section id="historySection" class="history-section hidden">
+                <div class="history-header">
+                    <h3><i class="fas fa-list"></i> URLs Creadas</h3>
+                    <button onclick="loadUrls()" class="refresh-btn">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div id="urlsList" class="urls-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notification" class="notification"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
