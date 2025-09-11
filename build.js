@@ -21,7 +21,7 @@ const publicDir = 'public';
 const filesToCopy = [
     'styles.css',
     'script-static.js', 
-    'index-static.html',
+    'index.html',  // Usar el index original, no el estático
     'logo.png'
 ];
 
@@ -29,10 +29,7 @@ filesToCopy.forEach(file => {
     const sourcePath = path.join(publicDir, file);
     let destPath = path.join(outputDir, file);
     
-    // Renombrar archivos específicos
-    if (file === 'index-static.html') {
-        destPath = path.join(outputDir, 'index.html');
-    }
+    // Renombrar solo el script
     if (file === 'script-static.js') {
         destPath = path.join(outputDir, 'script.js');
     }

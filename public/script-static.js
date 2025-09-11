@@ -1,9 +1,31 @@
-// Variables globales para versión GitHub Pages
+// Variables globales - emulando el comportamiento original
 let currentUrls = [];
 let currentQRData = null;
 let historyVisible = false;
 let currentUser = null; // Siempre null para versión estática
 const STORAGE_KEY = 'fisurl_local_storage';
+
+// Función para cargar información del usuario (estática)
+async function loadUserInfo() {
+    // Para versión estática, siempre no autenticado
+    currentUser = null;
+    updateAuthUI(false, false);
+    loadUrls();
+}
+
+// Función para actualizar la UI de autenticación (como en el original)
+function updateAuthUI(isAuthenticated = false, auth0Configured = false) {
+    const authSection = document.getElementById('authSection');
+    const loginPromotion = document.getElementById('loginPromotion');
+    const historyToggle = document.querySelector('.history-toggle');
+    
+    // Para GitHub Pages, simular usuario no autenticado pero sin mostrar botones de Auth0
+    authSection.innerHTML = '';
+    
+    // Mostrar promoción pero adaptada para GitHub Pages
+    if (loginPromotion) loginPromotion.classList.remove('hidden');
+    if (historyToggle) historyToggle.classList.remove('hidden');
+}
 
 // Función para generar ID corto
 function generateShortId() {
@@ -18,13 +40,6 @@ function isValidUrl(string) {
     } catch (_) {
         return false;
     }
-}
-
-// Emular funciones del servidor
-function updateAuthUI(isAuthenticated = false, auth0Configured = false) {
-    const authSection = document.getElementById('authSection');
-    // Para versión GitHub Pages, siempre mostrar como no autenticado
-    authSection.innerHTML = '';
 }
 
 // Cargar URLs del localStorage
@@ -49,7 +64,7 @@ function saveUrls() {
     }
 }
 
-// Función para acortar URL (versión estática)
+// Función para acortar URL (emulando el comportamiento original)
 async function shortenUrl() {
     const urlInput = document.getElementById('urlInput');
     const shortenBtn = document.getElementById('shortenBtn');
@@ -63,6 +78,7 @@ async function shortenUrl() {
         return;
     }
     
+    // Validación básica de URL
     if (!isValidUrl(url)) {
         showNotification('Por favor ingresa una URL válida', 'error');
         return;
@@ -73,10 +89,10 @@ async function shortenUrl() {
     shortenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     
     try {
-        // Simular procesamiento
+        // Simular procesamiento del servidor
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Generar URL corta (simulada para GitHub Pages)
+        // Generar URL corta
         const shortCode = generateShortId();
         const shortUrl = `${window.location.origin}${window.location.pathname}#${shortCode}`;
         
@@ -95,7 +111,7 @@ async function shortenUrl() {
         currentUrls.unshift(urlData);
         saveUrls();
         
-        // Ocultar sección de input
+        // Ocultar sección de input con animación
         inputSection.style.animation = 'fadeOut 0.5s ease-out forwards';
         
         setTimeout(() => {
@@ -103,7 +119,6 @@ async function shortenUrl() {
             
             // Mostrar resultado
             document.getElementById('shortUrl').textContent = shortUrl;
-            document.getElementById('createdDate').textContent = new Date().toLocaleDateString();
             resultSection.classList.remove('hidden');
             resultSection.style.animation = 'fadeIn 0.5s ease-out forwards';
             
@@ -113,7 +128,16 @@ async function shortenUrl() {
                 originalUrl: url
             };
             
-            showNotification('¡URL acortada exitosamente!', 'success');
+            // Ocultar QR section inicialmente
+            const qrSection = document.getElementById('qrSection');
+            qrSection.classList.add('hidden');
+            currentQRData = null;
+            
+            // Mostrar notificación como en el original
+            showNotification('¡URL acortada! (Guardada localmente)', 'success');
+            
+            // Actualizar historial
+            loadUrls();
         }, 500);
         
     } catch (error) {
@@ -144,15 +168,24 @@ async function copyToClipboard() {
     }
 }
 
-// Función para generar código QR
+// Función para generar código QR (como en el original)
 async function generateQR() {
     const qrSection = document.getElementById('qrSection');
     const qrImage = document.getElementById('qrImage');
     
-    if (!currentQRData) return;
+    if (!currentQRData) {
+        // Si no hay datos, usar la URL del resultado actual
+        const shortUrl = document.getElementById('shortUrl').textContent;
+        if (!shortUrl) return;
+        
+        currentQRData = {
+            url: shortUrl,
+            originalUrl: shortUrl
+        };
+    }
     
     try {
-        // Generar QR como data URL
+        // Generar QR como data URL usando la misma configuración del original
         const qrDataURL = await QRCode.toDataURL(currentQRData.url, {
             width: 200,
             height: 200,
@@ -187,25 +220,25 @@ function downloadQR() {
     showNotification('¡Código QR descargado!', 'success');
 }
 
-// Función para crear otra URL (equivalente a resetForm)
+// Función para crear otra URL (como en el original)
 function createAnother() {
     const inputSection = document.getElementById('inputSection');
     const resultSection = document.getElementById('resultSection');
     const qrSection = document.getElementById('qrSection');
     const urlInput = document.getElementById('urlInput');
     
-    // Ocultar resultado
+    // Ocultar resultado con animación
     resultSection.style.animation = 'fadeOut 0.5s ease-out forwards';
     
     setTimeout(() => {
         resultSection.classList.add('hidden');
         qrSection.classList.add('hidden');
         
-        // Mostrar input
+        // Mostrar input con animación
         inputSection.classList.remove('hidden');
         inputSection.style.animation = 'fadeIn 0.5s ease-out forwards';
         
-        // Limpiar input
+        // Limpiar y enfocar input
         urlInput.value = '';
         urlInput.focus();
         
