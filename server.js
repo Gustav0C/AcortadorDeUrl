@@ -247,17 +247,28 @@ app.post('/api/shorten', (req, res) => {
             });
         });
     } else {
-        // Usuario no autenticado - solo generar código sin guardar
+        // Usuario no autenticado - generar código y guardar como temporal
         const shortCode = shortid.generate();
         
         console.log('🔄 Generando URL temporal para usuario no autenticado:', { url, shortCode }); // Debug
         
-        res.json({
-            success: true,
-            shortUrl: `${getBaseUrl(req)}/${shortCode}`,
-            shortCode: shortCode,
-            originalUrl: url,
-            temporary: true // Indicar que es temporal
+        // Guardar URL temporal en la base de datos (sin user_id)
+        db.run('INSERT INTO urls (original_url, short_code, user_id) VALUES (?, ?, ?)', 
+            [url, shortCode, null], function(err) {
+            if (err) {
+                console.error('❌ Error al guardar URL temporal:', err); // Debug
+                return res.status(500).json({ error: 'Error al guardar URL temporal: ' + err.message });
+            }
+            
+            console.log('✅ URL temporal guardada exitosamente'); // Debug
+            
+            res.json({
+                success: true,
+                shortUrl: `${getBaseUrl(req)}/${shortCode}`,
+                shortCode: shortCode,
+                originalUrl: url,
+                temporary: true // Indicar que es temporal
+            });
         });
     }
 });
