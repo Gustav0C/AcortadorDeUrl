@@ -2,6 +2,7 @@
 let currentUrls = [];
 let currentQRData = null;
 let historyVisible = false;
+let currentUser = null; // Siempre null para versión estática
 const STORAGE_KEY = 'fisurl_local_storage';
 
 // Función para generar ID corto
@@ -17,6 +18,13 @@ function isValidUrl(string) {
     } catch (_) {
         return false;
     }
+}
+
+// Emular funciones del servidor
+function updateAuthUI(isAuthenticated = false, auth0Configured = false) {
+    const authSection = document.getElementById('authSection');
+    // Para versión GitHub Pages, siempre mostrar como no autenticado
+    authSection.innerHTML = '';
 }
 
 // Cargar URLs del localStorage
@@ -139,23 +147,23 @@ async function copyToClipboard() {
 // Función para generar código QR
 async function generateQR() {
     const qrSection = document.getElementById('qrSection');
-    const qrCode = document.getElementById('qrCode');
+    const qrImage = document.getElementById('qrImage');
     
     if (!currentQRData) return;
     
     try {
-        // Limpiar QR anterior
-        qrCode.innerHTML = '';
-        
-        // Generar nuevo QR
-        await QRCode.toCanvas(qrCode, currentQRData.url, {
+        // Generar QR como data URL
+        const qrDataURL = await QRCode.toDataURL(currentQRData.url, {
             width: 200,
             height: 200,
-            colorDark: '#667eea',
-            colorLight: '#ffffff',
+            color: {
+                dark: '#667eea',
+                light: '#ffffff'
+            },
             margin: 2
         });
         
+        qrImage.src = qrDataURL;
         qrSection.classList.remove('hidden');
         qrSection.style.animation = 'fadeIn 0.5s ease-out forwards';
         
@@ -168,19 +176,19 @@ async function generateQR() {
 
 // Función para descargar QR
 function downloadQR() {
-    const canvas = document.querySelector('#qrCode canvas');
-    if (!canvas) return;
+    const qrImage = document.getElementById('qrImage');
+    if (!qrImage.src) return;
     
     const link = document.createElement('a');
     link.download = `qr-${currentQRData.originalUrl.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
-    link.href = canvas.toDataURL();
+    link.href = qrImage.src;
     link.click();
     
     showNotification('¡Código QR descargado!', 'success');
 }
 
-// Función para resetear formulario
-function resetForm() {
+// Función para crear otra URL (equivalente a resetForm)
+function createAnother() {
     const inputSection = document.getElementById('inputSection');
     const resultSection = document.getElementById('resultSection');
     const qrSection = document.getElementById('qrSection');
@@ -208,18 +216,22 @@ function resetForm() {
 
 // Función para mostrar/ocultar historial
 function toggleHistory() {
-    const historyContent = document.getElementById('historyContent');
-    const toggleBtn = document.getElementById('historyToggleBtn');
+    const historySection = document.getElementById('historySection');
+    const toggleBtn = document.querySelector('.toggle-btn');
     
     historyVisible = !historyVisible;
     
     if (historyVisible) {
-        historyContent.classList.remove('hidden');
-        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar';
+        historySection.classList.remove('hidden');
+        historySection.style.animation = 'slideDown 0.5s ease-out forwards';
+        toggleBtn.innerHTML = '<i class="fas fa-history"></i> Ocultar historial';
         loadUrls(); // Recargar URLs
     } else {
-        historyContent.classList.add('hidden');
-        toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Mostrar';
+        historySection.style.animation = 'slideUp 0.5s ease-out forwards';
+        setTimeout(() => {
+            historySection.classList.add('hidden');
+        }, 500);
+        toggleBtn.innerHTML = '<i class="fas fa-history"></i> Ver historial local';
     }
 }
 
@@ -341,6 +353,10 @@ function showNotification(message, type = 'success') {
 
 // Inicializar cuando se carga la página
 document.addEventListener('DOMContentLoaded', () => {
+    // Configurar UI como no autenticado
+    updateAuthUI(false, false);
+    
+    // Cargar URLs del localStorage
     loadUrls();
     
     // Manejar Enter en el input
@@ -350,7 +366,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Manejar redirecciones basadas en hash
+    // Focus en el input
+    document.getElementById('urlInput').focus();
+    
+    // Manejar redirecciones basadas en hash (si alguien comparte una URL corta)
     if (window.location.hash) {
         const hash = window.location.hash.substring(1);
         const urlData = currentUrls.find(url => url.shortCode === hash);
@@ -367,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.open(urlData.originalUrl, '_blank');
             }, 1000);
         } else {
-            showNotification('URL no encontrada', 'error');
+            showNotification('URL no encontrada en el historial local', 'warning');
         }
     }
 });

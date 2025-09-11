@@ -111,6 +111,33 @@ body {
     color: #764ba2;
 }
 
+/* GitHub promo styles */
+.github-promo {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+}
+
+.github-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #333, #555);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.github-btn:hover {
+    background: linear-gradient(135deg, #555, #777);
+    transform: translateY(-2px);
+}
+
 .brand p {
     font-size: 1.2rem;
     opacity: 0.9;
