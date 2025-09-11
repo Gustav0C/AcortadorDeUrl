@@ -20,13 +20,13 @@
     "sqlite",
     "vercel"
   ],
-  "author": "Tu Nombre",
+  "author": "Gustav0C",
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tu-usuario/fis-url.git"
+    "url": "https://github.com/Gustav0C/AcortadorDeUrl.git"
   },
-  "homepage": "https://github.com/tu-usuario/fis-url#readme",
+  "homepage": "https://github.com/Gustav0C/AcortadorDeUrl/blob/main/README.md",
   "engines": {
     "node": ">=18.0.0"
   },
