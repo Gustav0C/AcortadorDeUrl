@@ -206,7 +206,7 @@ app.post('/api/shorten', (req, res) => {
                 // URL ya existe, devolver el código existente
                 return res.json({
                     success: true,
-                    shortUrl: `http://localhost:${PORT}/${row.short_code}`,
+                    shortUrl: `https://acortador-de-url-alpha.vercel.app/${row.short_code}`,
                     shortCode: row.short_code,
                     originalUrl: row.original_url
                 });
@@ -228,7 +228,7 @@ app.post('/api/shorten', (req, res) => {
                 
                 res.json({
                     success: true,
-                    shortUrl: `http://localhost:${PORT}/${shortCode}`,
+                    shortUrl: `https://acortador-de-url-alpha.vercel.app/${shortCode}`,
                     shortCode: shortCode,
                     originalUrl: url
                 });
@@ -242,7 +242,7 @@ app.post('/api/shorten', (req, res) => {
         
         res.json({
             success: true,
-            shortUrl: `http://localhost:${PORT}/${shortCode}`,
+            shortUrl: `https://acortador-de-url-alpha.vercel.app/${shortCode}`,
             shortCode: shortCode,
             originalUrl: url,
             temporary: true // Indicar que es temporal
@@ -360,7 +360,7 @@ app.get('/api/qr/:shortCode', async (req, res) => {
     
     try {
         // Generar la URL corta
-        const shortUrl = `http://localhost:${PORT}/${shortCode}`;
+        const shortUrl = `https://acortador-de-url-alpha.vercel.app/${shortCode}`;
         
         // Generar código QR como Data URL (base64)
         const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, {
