@@ -16,23 +16,20 @@ if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
 }
 
-// Copiar archivos estáticos
+// Copiar archivos estáticos originales SIN modificaciones
 const publicDir = 'public';
 const filesToCopy = [
     'styles.css',      // CSS original
-    'script-hybrid.js', // Script híbrido que funciona sin backend
+    'script.js',       // Script original EXACTO
     'index.html',      // HTML original
-    'logo.png'
+    'logo.png'         // Logo original
 ];
 
 filesToCopy.forEach(file => {
     const sourcePath = path.join(publicDir, file);
     let destPath = path.join(outputDir, file);
     
-    // Renombrar el script híbrido a script.js
-    if (file === 'script-hybrid.js') {
-        destPath = path.join(outputDir, 'script.js');
-    }
+    // NO renombrar nada, usar archivos exactos
     
     if (fs.existsSync(sourcePath)) {
         fs.copyFileSync(sourcePath, destPath);
