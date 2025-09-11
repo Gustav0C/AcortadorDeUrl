@@ -19,6 +19,11 @@ urls.db
 *.sqlite
 *.sqlite3
 
+# Build output (generado automáticamente)
+_site/
+dist/
+build/
+
 # Logs
 logs/
 *.log
