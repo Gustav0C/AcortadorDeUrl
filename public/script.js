@@ -4,10 +4,31 @@ let currentQRData = null;
 let historyVisible = false;
 let currentUser = null;
 
+// Función helper para fetch con timeout
+async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        if (error.name === 'AbortError') {
+            throw new Error('Tiempo de espera agotado');
+        }
+        throw error;
+    }
+}
+
 // Función para cargar información del usuario
 async function loadUserInfo() {
     try {
-        const response = await fetch('/api/user');
+        const response = await fetchWithTimeout('/api/user');
         const data = await response.json();
         
         console.log('User data received:', data); // Debug
@@ -139,12 +160,18 @@ async function shortenUrl() {
         return;
     }
     
+    // Validar longitud máxima
+    if (url.length > 10000) {
+        showNotification('La URL excede el límite máximo de 10000 caracteres', 'error');
+        return;
+    }
+    
     // Mostrar estado de carga
     shortenBtn.disabled = true;
     shortenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     
     try {
-        const response = await fetch('/api/shorten', {
+        const response = await fetchWithTimeout('/api/shorten', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -239,7 +266,7 @@ async function generateQR() {
     const shortCode = shortUrl.split('/').pop();
     
     try {
-        const response = await fetch(`/api/qr/${shortCode}`);
+        const response = await fetchWithTimeout(`/api/qr/${shortCode}`);
         const data = await response.json();
         
         if (data.success) {
@@ -326,7 +353,7 @@ async function deleteUrl(shortCode) {
     }
     
     try {
-        const response = await fetch(`/api/urls/${shortCode}`, {
+        const response = await fetchWithTimeout(`/api/urls/${shortCode}`, {
             method: 'DELETE'
         });
         
@@ -347,10 +374,14 @@ async function deleteUrl(shortCode) {
 // Función para mostrar QR desde historial
 async function showQRFromHistory(shortCode) {
     try {
-        const response = await fetch(`/api/qr/${shortCode}`);
+        const response = await fetchWithTimeout(`/api/qr/${shortCode}`);
         const data = await response.json();
         
         if (data.success) {
+            // Sanitizar datos antes de usarlos en HTML
+            const safeShortUrl = escapeHtml(data.shortUrl);
+            const safeQrCode = data.qrCode;
+            
             // Crear modal para mostrar el QR
             const modal = document.createElement('div');
             modal.className = 'qr-modal';
@@ -363,13 +394,13 @@ async function showQRFromHistory(shortCode) {
                         </button>
                     </div>
                     <div class="qr-modal-body">
-                        <img src="${data.qrCode}" alt="Código QR" class="qr-modal-image" />
-                        <p class="qr-url">${data.shortUrl}</p>
+                        <img src="${safeQrCode}" alt="Código QR" class="qr-modal-image" />
+                        <p class="qr-url">${safeShortUrl}</p>
                         <div class="qr-modal-actions">
-                            <button onclick="downloadQRFromModal('${data.qrCode}', '${shortCode}')" class="download-btn">
+                            <button onclick="downloadQRFromModal('${encodeURIComponent(safeQrCode)}', '${encodeURIComponent(shortCode)}')" class="download-btn">
                                 <i class="fas fa-download"></i> Descargar
                             </button>
-                            <button onclick="copyToClipboardFromModal('${data.shortUrl}')" class="copy-btn">
+                            <button onclick="copyToClipboardFromModal('${safeShortUrl}')" class="copy-btn">
                                 <i class="fas fa-copy"></i> Copiar URL
                             </button>
                         </div>
@@ -405,9 +436,13 @@ function closeQRModal() {
 
 // Función para descargar QR desde modal
 function downloadQRFromModal(qrData, shortCode) {
+    // Decodificar si viene codificado
+    const decodedQrData = decodeURIComponent(qrData);
+    const decodedShortCode = decodeURIComponent(shortCode);
+    
     const link = document.createElement('a');
-    link.download = `qr-code-${shortCode}.png`;
-    link.href = qrData;
+    link.download = `qr-code-${decodedShortCode}.png`;
+    link.href = decodedQrData;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -435,7 +470,7 @@ async function loadUrls() {
     const urlsList = document.getElementById('urlsList');
     
     try {
-        const response = await fetch('/api/urls');
+        const response = await fetchWithTimeout('/api/urls');
         const data = await response.json();
         
         if (response.ok) {
@@ -463,13 +498,21 @@ async function loadUrls() {
     }
 }
 
+// Función para sanitizar HTML y prevenir XSS
+function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
 // Función para renderizar lista de URLs
 function renderUrls(urls, customMessage = null) {
     const urlsList = document.getElementById('urlsList');
     
     if (urls.length === 0) {
         const message = customMessage || 'No hay URLs creadas aún';
-        urlsList.innerHTML = `<p style="text-align: center; color: #666; padding: 20px;">${message}</p>`;
+        urlsList.innerHTML = `<p style="text-align: center; color: #666; padding: 20px;">${escapeHtml(message)}</p>`;
         return;
     }
     
@@ -480,19 +523,19 @@ function renderUrls(urls, customMessage = null) {
         return `
             <div class="url-item">
                 <div class="url-header">
-                    <a href="${shortUrl}" target="_blank" class="url-short">${shortUrl}</a>
+                    <a href="${escapeHtml(shortUrl)}" target="_blank" class="url-short">${escapeHtml(shortUrl)}</a>
                     <div class="url-actions">
-                        <span class="url-clicks">${url.clicks} clicks</span>
-                        <button onclick="showQRFromHistory('${url.short_code}')" class="qr-btn" title="Ver código QR">
+                        <span class="url-clicks">${escapeHtml(String(url.clicks))} clicks</span>
+                        <button onclick="showQRFromHistory('${escapeHtml(url.short_code)}')" class="qr-btn" title="Ver código QR">
                             <i class="fas fa-qrcode"></i>
                         </button>
-                        <button onclick="deleteUrl('${url.short_code}')" class="delete-btn" title="Eliminar URL">
+                        <button onclick="deleteUrl('${escapeHtml(url.short_code)}')" class="delete-btn" title="Eliminar URL">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
-                <div class="url-original">${url.original_url}</div>
-                <div class="url-date">Creada: ${createdDate}</div>
+                <div class="url-original">${escapeHtml(url.original_url)}</div>
+                <div class="url-date">Creada: ${escapeHtml(createdDate)}</div>
             </div>
         `;
     }).join('');

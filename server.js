@@ -1,8 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const shortid = require('shortid');
+const shortid = require('shortid'); // Deprecated - mantener temporalmente por compatibilidad
+const { customAlphabet } = require('nanoid');
+const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 10);
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 const path = require('path');
 const validator = require('url-validator');
 const QRCode = require('qrcode');
@@ -94,8 +98,39 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Rate limiting para prevenir abuse
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // máximo 100 requests por ventana por IP
+    message: { error: 'Demasiadas solicitudes. Por favor intenta más tarde.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api/', limiter);
+
+// Agregar helmet para headers de seguridad (CSRF, X-Frame-Options, etc.)
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'cdnjs.cloudflare.com'],
+            styleSrc: ["'self'", "'unsafe-inline'", 'cdnjs.cloudflare.com'],
+            imgSrc: ["'self'", 'data:', 'via.placeholder.com'],
+        },
+    },
+    crossOriginEmbedderPolicy: false, // Allow embedding
+}));
+
 // Configurar la base de datos SQLite
-const dbPath = process.env.NODE_ENV === 'production' ? '/tmp/urls.db' : './urls.db';
+let dbPath = process.env.NODE_ENV === 'production' ? '/tmp/urls.db' : './urls.db';
+
+// Validar que el path sea seguro (solo permitir rutas absolutas o relativas simples)
+const pathValidation = /^(\/tmp\/|\.\/)[a-zA-Z0-9_-]*\.db$/;
+if (!pathValidation.test(dbPath)) {
+    console.error('❌ Path de base de datos no válido');
+    process.exit(1);
+}
+
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('❌ Error al conectar con la base de datos:', err.message);
@@ -200,10 +235,15 @@ app.post('/api/shorten', (req, res) => {
     const { url } = req.body;
     const userId = (auth0ConfigValid && req.oidc && req.oidc.isAuthenticated()) ? req.oidc.user.sub : null;
     
-    console.log('� [SHORTEN] Iniciando request:', { url, userId, environment: process.env.NODE_ENV }); // Debug
+    console.log('📝 [SHORTEN] Nueva solicitud de URL'); // Debug
     
     if (!url) {
         return res.status(400).json({ error: 'URL es requerida' });
+    }
+    
+    // Validar longitud máxima de URL
+    if (url.length > 10000) {
+        return res.status(400).json({ error: 'URL excede el límite máximo de caracteres' });
     }
     
     if (!isValidURL(url)) {
@@ -216,7 +256,7 @@ app.post('/api/shorten', (req, res) => {
         const query = 'SELECT * FROM urls WHERE original_url = ? AND user_id = ?';
         const params = [url, userId];
         
-        console.log('🔍 Query:', query, 'Params:', params); // Debug
+        console.log('🔍 Verificando URL existente en DB'); // Debug
         
         db.get(query, params, (err, row) => {
             if (err) {
@@ -224,7 +264,7 @@ app.post('/api/shorten', (req, res) => {
                 return res.status(500).json({ error: 'Error de base de datos: ' + err.message });
             }
             
-            console.log('✅ Resultado db.get:', row); // Debug
+            console.log('✅ URL ya existe'); // Debug
             
             if (row) {
                 // URL ya existe, devolver el código existente
@@ -237,9 +277,9 @@ app.post('/api/shorten', (req, res) => {
             }
             
             // Crear nuevo código corto
-            const shortCode = shortid.generate();
+            const shortCode = nanoid();
             
-            console.log('💾 Insertando nueva URL:', { url, shortCode, userId }); // Debug
+            console.log('💾 Insertando nueva URL'); // Debug
             
             db.run('INSERT INTO urls (original_url, short_code, user_id) VALUES (?, ?, ?)', 
                 [url, shortCode, userId], function(err) {
@@ -262,7 +302,7 @@ app.post('/api/shorten', (req, res) => {
         // Usuario no autenticado - generar código y guardar como temporal
         const shortCode = shortid.generate();
         
-        console.log('🔄 Generando URL temporal para usuario no autenticado:', { url, shortCode }); // Debug
+        console.log('🔄 Generando URL temporal'); // Debug
         
         // Guardar URL temporal en la base de datos (sin user_id)
         db.run('INSERT INTO urls (original_url, short_code, user_id) VALUES (?, ?, ?)', 
@@ -312,7 +352,7 @@ app.get('/api/stats/:shortCode', (req, res) => {
 app.get('/api/urls', (req, res) => {
     const userId = (auth0ConfigValid && req.oidc && req.oidc.isAuthenticated()) ? req.oidc.user.sub : null;
     
-    console.log('📋 Listar URLs request:', { userId, auth0ConfigValid }); // Debug
+    console.log('📋 Solicitando lista de URLs'); // Debug
     
     // Solo devolver URLs si el usuario está autenticado
     if (!userId) {
@@ -326,7 +366,7 @@ app.get('/api/urls', (req, res) => {
     const query = 'SELECT * FROM urls WHERE user_id = ? ORDER BY created_at DESC';
     const params = [userId];
     
-    console.log('🔍 Query URLs:', query, 'Params:', params); // Debug
+    console.log('🔍 Ejecutando query de URLs'); // Debug
     
     db.all(query, params, (err, rows) => {
         if (err) {

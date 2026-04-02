@@ -712,8 +712,8 @@ body {
     color: white;
     font-weight: 600;
     transform: translateX(500px);
-    opacity: 0; /* Añadido para asegurar ocultación completa */
-    visibility: hidden; /* Añadido para asegurar ocultación completa */
+    opacity: 0;
+    visibility: hidden;
     transition: transform 0.4s ease, opacity 0.4s ease, visibility 0.4s ease;
     z-index: 1000;
     backdrop-filter: blur(10px);
@@ -723,8 +723,8 @@ body {
 
 .notification.show {
     transform: translateX(0);
-    opacity: 1; /* Visible cuando se muestra */
-    visibility: visible; /* Visible cuando se muestra */
+    opacity: 1;
+    visibility: visible;
 }
 
 .notification.success {
