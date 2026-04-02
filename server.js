@@ -1,9 +1,19 @@
 require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const shortid = require('shortid'); // Deprecated - mantener temporalmente por compatibilidad
-const { customAlphabet } = require('nanoid');
-const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 10);
+
+// Usar nanoid si está disponible, si no usar shortid como fallback
+let generateShortCode;
+try {
+    const { customAlphabet } = require('nanoid');
+    const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 10);
+    generateShortCode = () => nanoid();
+} catch (e) {
+    // Fallback a shortid si nanoid falla (Vercel)
+    const shortid = require('shortid');
+    generateShortCode = () => shortid.generate();
+}
+
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
@@ -124,11 +134,12 @@ app.use(helmet({
 // Configurar la base de datos SQLite
 let dbPath = process.env.NODE_ENV === 'production' ? '/tmp/urls.db' : './urls.db';
 
-// Validar que el path sea seguro (solo permitir rutas absolutas o relativas simples)
-const pathValidation = /^(\/tmp\/|\.\/)[a-zA-Z0-9_-]*\.db$/;
-if (!pathValidation.test(dbPath)) {
-    console.error('❌ Path de base de datos no válido');
-    process.exit(1);
+// Validar que el path sea seguro solo en desarrollo local
+if (process.env.NODE_ENV !== 'production') {
+    const pathValidation = /^(\/tmp\/|\.\/)[a-zA-Z0-9_-]*\.db$/;
+    if (dbPath && !pathValidation.test(dbPath)) {
+        dbPath = './urls.db';
+    }
 }
 
 const db = new sqlite3.Database(dbPath, (err) => {
@@ -277,7 +288,7 @@ app.post('/api/shorten', (req, res) => {
             }
             
             // Crear nuevo código corto
-            const shortCode = nanoid();
+            const shortCode = generateShortCode();
             
             console.log('💾 Insertando nueva URL'); // Debug
             
