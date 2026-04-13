@@ -197,13 +197,9 @@ async function shortenUrl() {
                 qrSection.classList.add('hidden');
                 currentQRData = null;
                 
-                // Mostrar mensaje diferente según si es temporal o no
+                // Mostrar mensaje para URL temporal
                 if (data.temporary) {
-                    if (data.remainingUrls !== undefined) {
-                        showNotification(`¡URL acortada! (Temporal - Te quedan ${data.remainingUrls} URLs hoy. Inicia sesión para guardarla y más beneficios)`, 'warning');
-                    } else {
-                        showNotification('¡URL acortada! (Temporal - Inicia sesión para guardarla)', 'warning');
-                    }
+                    showNotification('¡URL acortada! (Temporal - Inicia sesión para guardarla y acceder a más beneficios)', 'warning');
                 } else {
                     showNotification('¡URL acortada y guardada exitosamente!');
                 }

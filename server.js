@@ -373,42 +373,16 @@ app.post('/api/shorten', (req, res) => {
             });
         });
     } else {
-        // Usuario no autenticado - verificar límite de 5 URLs por día
+        // Usuario no autenticado - solo puede tener 1 URL temporal activa a la vez
         const today = new Date().toISOString().split('T')[0]; // Fecha actual YYYY-MM-DD
         
-        // Contar URLs temporales creadas hoy por esta IP
-        db.get('SELECT COUNT(*) as count FROM urls WHERE user_id IS NULL AND ip_address = ? AND DATE(created_at) = ?', 
-            [userIP, today], (err, row) => {
+        // Eliminar cualquier URL temporal anterior de esta IP (lógica "uno a la vez")
+        db.run('DELETE FROM urls WHERE user_id IS NULL AND ip_address = ?', 
+            [userIP], (err) => {
             if (err) {
-                console.error('❌ Error al contar URLs temporales:', err);
-                return res.status(500).json({ error: 'Error al verificar límite: ' + err.message });
-            }
-            
-            const dailyLimit = 5;
-            const currentCount = row ? row.count : 0;
-            
-            console.log(`📊 URLs temporales hoy: ${currentCount}/${dailyLimit} para IP: ${userIP}`);
-            
-            if (currentCount >= dailyLimit) {
-                // Usuario no autenticado alcanzó el límite
-                return res.status(403).json({ 
-                    error: 'Límite alcanzado',
-                    requiresAuth: true,
-                    message: 'Has alcanzado el límite de 5 URLs diarias. Inicia sesión para continuar acortando URLs sin límites y guardar tu historial.'
-                });
-            }
-            
-            // Si ya tiene una URL temporal, la eliminamos (lógica de "una a la vez")
-            if (currentCount > 0) {
-                // Eliminar la URL temporal anterior del usuario
-                db.run('DELETE FROM urls WHERE user_id IS NULL AND ip_address = ? AND DATE(created_at) = ?', 
-                    [userIP, today], (err) => {
-                    if (err) {
-                        console.error('❌ Error al eliminar URL temporal anterior:', err);
-                        // Continuar aunque haya error al eliminar
-                    }
-                    console.log('🗑️ URL temporal anterior eliminada');
-                });
+                console.error('❌ Error al eliminar URL temporal anterior:', err);
+            } else {
+                console.log('🗑️ URL temporal anterior eliminada (si existía)');
             }
             
             // Generar código corto para URL temporal
@@ -421,7 +395,7 @@ app.post('/api/shorten', (req, res) => {
                 shortCode = shortid.generate();
             }
             
-            console.log('🔄 Generando URL temporal (intento #' + (currentCount + 1) + ')');
+            console.log('🔄 Generando URL temporal');
             
             // Guardar URL temporal en la base de datos (sin user_id, pero con IP)
             db.run('INSERT INTO urls (original_url, short_code, user_id, ip_address) VALUES (?, ?, NULL, ?)', 
@@ -438,8 +412,7 @@ app.post('/api/shorten', (req, res) => {
                     shortUrl: `${getBaseUrl(req)}/${shortCode}`,
                     shortCode: shortCode,
                     originalUrl: url,
-                    temporary: true, // Indicar que es temporal
-                    remainingUrls: dailyLimit - currentCount - 1,
+                    temporary: true,
                     message: 'URL temporal creada. Inicia sesión para guardarla y acceder a más beneficios.'
                 });
             });
