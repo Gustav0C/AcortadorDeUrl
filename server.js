@@ -147,7 +147,68 @@ const db = new sqlite3.Database(dbPath, (err) => {
         console.error('❌ Error al conectar con la base de datos:', err.message);
     } else {
         console.log('Conectado a la base de datos SQLite.');
-        // Crear la tabla si no existe
+        
+        // Migración robusta: verificar y agregar columna ip_address si no existe
+        db.all("PRAGMA table_info(urls)", (err, columns) => {
+            if (err) {
+                console.error('❌ Error al verificar estructura de tabla:', err.message);
+                return;
+            }
+            
+            const columnNames = columns.map(col => col.name);
+            
+            if (!columnNames.includes('ip_address')) {
+                // Crear tabla nueva con todas las columnas y copiar datos
+                console.log('🔄 Migrando base de datos - agregando columna ip_address...');
+                
+                // Primero crear la nueva tabla
+                db.run(`CREATE TABLE IF NOT EXISTS urls_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    original_url TEXT NOT NULL,
+                    short_code TEXT UNIQUE NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    clicks INTEGER DEFAULT 0,
+                    last_accessed DATETIME,
+                    user_id TEXT DEFAULT NULL,
+                    ip_address TEXT DEFAULT NULL
+                )`, (err) => {
+                    if (err) {
+                        console.error('❌ Error al crear tabla temporal:', err.message);
+                        return;
+                    }
+                    
+                    // Copiar datos de la tabla original
+                    db.run(`INSERT INTO urls_new (id, original_url, short_code, created_at, clicks, last_accessed, user_id, ip_address)
+                            SELECT id, original_url, short_code, created_at, clicks, last_accessed, user_id, NULL FROM urls`, (err) => {
+                        if (err) {
+                            console.error('❌ Error al copiar datos:', err.message);
+                            return;
+                        }
+                        
+                        // Eliminar tabla original y renombrar la nueva
+                        db.run('DROP TABLE urls', (err) => {
+                            if (err) {
+                                console.error('❌ Error al eliminar tabla original:', err.message);
+                                return;
+                            }
+                            
+                            db.run('ALTER TABLE urls_new RENAME TO urls', (err) => {
+                                if (err) {
+                                    console.error('❌ Error al renombrar tabla:', err.message);
+                                    return;
+                                }
+                                
+                                console.log('✅ Migración completada - columna ip_address agregada');
+                            });
+                        });
+                    });
+                });
+            } else {
+                console.log('✅ Tabla URLs verificada (ip_address ya existe)');
+            }
+        });
+        
+        // Crear la tabla si no existe (solo si es base de datos nueva)
         db.run(`CREATE TABLE IF NOT EXISTS urls (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             original_url TEXT NOT NULL,
@@ -155,12 +216,13 @@ const db = new sqlite3.Database(dbPath, (err) => {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             clicks INTEGER DEFAULT 0,
             last_accessed DATETIME,
-            user_id TEXT DEFAULT NULL
+            user_id TEXT DEFAULT NULL,
+            ip_address TEXT DEFAULT NULL
         )`, (err) => {
             if (err) {
                 console.error('❌ Error al crear tabla:', err.message);
             } else {
-                console.log('✅ Tabla URLs verificada/creada exitosamente');
+                console.log('✅ Tabla URLs verificada/creada');
             }
         });
     }
@@ -245,6 +307,7 @@ app.get('/api/debug', (req, res) => {
 app.post('/api/shorten', (req, res) => {
     const { url } = req.body;
     const userId = (auth0ConfigValid && req.oidc && req.oidc.isAuthenticated()) ? req.oidc.user.sub : null;
+    const userIP = req.ip || req.connection.remoteAddress; // IP del usuario para limitar-anónimos
     
     console.log('📝 [SHORTEN] Nueva solicitud de URL'); // Debug
     
@@ -310,27 +373,75 @@ app.post('/api/shorten', (req, res) => {
             });
         });
     } else {
-        // Usuario no autenticado - generar código y guardar como temporal
-        const shortCode = shortid.generate();
+        // Usuario no autenticado - verificar límite de 5 URLs por día
+        const today = new Date().toISOString().split('T')[0]; // Fecha actual YYYY-MM-DD
         
-        console.log('🔄 Generando URL temporal'); // Debug
-        
-        // Guardar URL temporal en la base de datos (sin user_id)
-        db.run('INSERT INTO urls (original_url, short_code, user_id) VALUES (?, ?, ?)', 
-            [url, shortCode, null], function(err) {
+        // Contar URLs temporales creadas hoy por esta IP
+        db.get('SELECT COUNT(*) as count FROM urls WHERE user_id IS NULL AND ip_address = ? AND DATE(created_at) = ?', 
+            [userIP, today], (err, row) => {
             if (err) {
-                console.error('❌ Error al guardar URL temporal:', err); // Debug
-                return res.status(500).json({ error: 'Error al guardar URL temporal: ' + err.message });
+                console.error('❌ Error al contar URLs temporales:', err);
+                return res.status(500).json({ error: 'Error al verificar límite: ' + err.message });
             }
             
-            console.log('✅ URL temporal guardada exitosamente'); // Debug
+            const dailyLimit = 5;
+            const currentCount = row ? row.count : 0;
             
-            res.json({
-                success: true,
-                shortUrl: `${getBaseUrl(req)}/${shortCode}`,
-                shortCode: shortCode,
-                originalUrl: url,
-                temporary: true // Indicar que es temporal
+            console.log(`📊 URLs temporales hoy: ${currentCount}/${dailyLimit} para IP: ${userIP}`);
+            
+            if (currentCount >= dailyLimit) {
+                // Usuario no autenticado alcanzó el límite
+                return res.status(403).json({ 
+                    error: 'Límite alcanzado',
+                    requiresAuth: true,
+                    message: 'Has alcanzado el límite de 5 URLs diarias. Inicia sesión para continuar acortando URLs sin límites y guardar tu historial.'
+                });
+            }
+            
+            // Si ya tiene una URL temporal, la eliminamos (lógica de "una a la vez")
+            if (currentCount > 0) {
+                // Eliminar la URL temporal anterior del usuario
+                db.run('DELETE FROM urls WHERE user_id IS NULL AND ip_address = ? AND DATE(created_at) = ?', 
+                    [userIP, today], (err) => {
+                    if (err) {
+                        console.error('❌ Error al eliminar URL temporal anterior:', err);
+                        // Continuar aunque haya error al eliminar
+                    }
+                    console.log('🗑️ URL temporal anterior eliminada');
+                });
+            }
+            
+            // Generar código corto para URL temporal
+            let shortCode;
+            try {
+                shortCode = generateShortCode();
+            } catch (e) {
+                // Fallback si generateShortCode falla
+                const shortid = require('shortid');
+                shortCode = shortid.generate();
+            }
+            
+            console.log('🔄 Generando URL temporal (intento #' + (currentCount + 1) + ')');
+            
+            // Guardar URL temporal en la base de datos (sin user_id, pero con IP)
+            db.run('INSERT INTO urls (original_url, short_code, user_id, ip_address) VALUES (?, ?, NULL, ?)', 
+                [url, shortCode, userIP], function(err) {
+                if (err) {
+                    console.error('❌ Error al guardar URL temporal:', err);
+                    return res.status(500).json({ error: 'Error al guardar URL temporal: ' + err.message });
+                }
+                
+                console.log('✅ URL temporal guardada exitosamente');
+                
+                res.json({
+                    success: true,
+                    shortUrl: `${getBaseUrl(req)}/${shortCode}`,
+                    shortCode: shortCode,
+                    originalUrl: url,
+                    temporary: true, // Indicar que es temporal
+                    remainingUrls: dailyLimit - currentCount - 1,
+                    message: 'URL temporal creada. Inicia sesión para guardarla y acceder a más beneficios.'
+                });
             });
         });
     }

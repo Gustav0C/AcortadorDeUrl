@@ -199,7 +199,11 @@ async function shortenUrl() {
                 
                 // Mostrar mensaje diferente según si es temporal o no
                 if (data.temporary) {
-                    showNotification('¡URL acortada! (Temporal - Inicia sesión para guardarla)', 'warning');
+                    if (data.remainingUrls !== undefined) {
+                        showNotification(`¡URL acortada! (Temporal - Te quedan ${data.remainingUrls} URLs hoy. Inicia sesión para guardarla y más beneficios)`, 'warning');
+                    } else {
+                        showNotification('¡URL acortada! (Temporal - Inicia sesión para guardarla)', 'warning');
+                    }
                 } else {
                     showNotification('¡URL acortada y guardada exitosamente!');
                 }
@@ -209,12 +213,15 @@ async function shortenUrl() {
                     loadUrls();
                 }
             }, 500);
+        } else if (data.requiresAuth) {
+            // Error que requiere autenticación - mostrar mensaje claro
+            showNotification(data.message || 'Inicia sesión para continuar acortando URLs sin límites', 'error');
         } else {
             showNotification(data.error || 'Error al acortar URL', 'error');
         }
     } catch (error) {
         console.error('Error:', error);
-        showNotification('Error de conexión', 'error');
+        showNotification('Error de conexión. Verifica tu internet e intenta nuevamente.', 'error');
     } finally {
         // Restaurar botón
         shortenBtn.disabled = false;
