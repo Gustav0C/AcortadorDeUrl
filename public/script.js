@@ -377,13 +377,14 @@ async function deleteUrl(shortCode) {
 // Función para mostrar QR desde historial
 async function showQRFromHistory(shortCode) {
     try {
-        const response = await fetchWithTimeout(`/api/qr/${shortCode}`);
+        const response = await fetchWithTimeout(`/api/qr/${encodeURIComponent(shortCode)}`);
         const data = await response.json();
         
         if (data.success) {
             // Sanitizar datos antes de usarlos en HTML
             const safeShortUrl = escapeHtml(data.shortUrl);
             const safeQrCode = data.qrCode;
+            const safeShortCode = escapeHtml(shortCode);
             
             // Crear modal para mostrar el QR
             const modal = document.createElement('div');
@@ -400,7 +401,7 @@ async function showQRFromHistory(shortCode) {
                         <img src="${safeQrCode}" alt="Código QR" class="qr-modal-image" />
                         <p class="qr-url">${safeShortUrl}</p>
                         <div class="qr-modal-actions">
-                            <button onclick="downloadQRFromModal('${encodeURIComponent(safeQrCode)}', '${encodeURIComponent(shortCode)}')" class="download-btn">
+                            <button onclick="downloadQRFromModal('${encodeURIComponent(safeQrCode)}', '${encodeURIComponent(safeShortCode)}')" class="download-btn">
                                 <i class="fas fa-download"></i> Descargar
                             </button>
                             <button onclick="copyToClipboardFromModal('${safeShortUrl}')" class="copy-btn">

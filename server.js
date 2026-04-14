@@ -237,6 +237,11 @@ function isValidURL(string) {
     }
 }
 
+// Función para validar shortCode (solo alphanumeric)
+function isValidShortCode(string) {
+    return /^[a-zA-Z0-9]+$/.test(string) && string.length <= 20;
+}
+
 // Rutas de fallback para Auth0 en caso de errores
 app.get('/login', (req, res) => {
     if (!auth0ConfigValid) {
@@ -307,7 +312,8 @@ app.get('/api/debug', (req, res) => {
 app.post('/api/shorten', (req, res) => {
     const { url } = req.body;
     const userId = (auth0ConfigValid && req.oidc && req.oidc.isAuthenticated()) ? req.oidc.user.sub : null;
-    const userIP = req.ip || req.connection.remoteAddress; // IP del usuario para limitar-anónimos
+    // IP del usuario para limitar-anónimos (con fallback seguro)
+    const userIP = req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
     
     console.log('📝 [SHORTEN] Nueva solicitud de URL'); // Debug
     
@@ -324,11 +330,21 @@ app.post('/api/shorten', (req, res) => {
         return res.status(400).json({ error: 'URL no válida' });
     }
     
+    // Normalizar URL antes de guardar (sanitización adicional)
+    let normalizedUrl = url.trim();
+    try {
+        const urlObj = new URL(normalizedUrl);
+        // Forzar protocolos válidos y eliminar fragmentos
+        normalizedUrl = urlObj.protocol + '//' + urlObj.hostname + urlObj.pathname + urlObj.search;
+    } catch (e) {
+        // Si falla, usar la original validada
+    }
+    
     // Solo verificar URLs existentes si el usuario está autenticado
     if (userId) {
-        // Verificar si la URL ya existe para este usuario
+        // Verificar si la URL ya existe para este usuario (usar normalizedUrl)
         const query = 'SELECT * FROM urls WHERE original_url = ? AND user_id = ?';
-        const params = [url, userId];
+        const params = [normalizedUrl, userId];
         
         console.log('🔍 Verificando URL existente en DB'); // Debug
         
@@ -356,7 +372,7 @@ app.post('/api/shorten', (req, res) => {
             console.log('💾 Insertando nueva URL'); // Debug
             
             db.run('INSERT INTO urls (original_url, short_code, user_id) VALUES (?, ?, ?)', 
-                [url, shortCode, userId], function(err) {
+                [normalizedUrl, shortCode, userId], function(err) {
                 if (err) {
                     console.error('❌ Error en db.run:', err); // Debug
                     return res.status(500).json({ error: 'Error al guardar URL: ' + err.message });
@@ -368,14 +384,12 @@ app.post('/api/shorten', (req, res) => {
                     success: true,
                     shortUrl: `${getBaseUrl(req)}/${shortCode}`,
                     shortCode: shortCode,
-                    originalUrl: url
+                    originalUrl: normalizedUrl
                 });
             });
         });
     } else {
         // Usuario no autenticado - solo puede tener 1 URL temporal activa a la vez
-        const today = new Date().toISOString().split('T')[0]; // Fecha actual YYYY-MM-DD
-        
         // Eliminar cualquier URL temporal anterior de esta IP (lógica "uno a la vez")
         db.run('DELETE FROM urls WHERE user_id IS NULL AND ip_address = ?', 
             [userIP], (err) => {
@@ -397,9 +411,9 @@ app.post('/api/shorten', (req, res) => {
             
             console.log('🔄 Generando URL temporal');
             
-            // Guardar URL temporal en la base de datos (sin user_id, pero con IP)
+            // Guardar URL temporal en la base de datos (sin user_id, pero con IP) - usar normalizedUrl
             db.run('INSERT INTO urls (original_url, short_code, user_id, ip_address) VALUES (?, ?, NULL, ?)', 
-                [url, shortCode, userIP], function(err) {
+                [normalizedUrl, shortCode, userIP], function(err) {
                 if (err) {
                     console.error('❌ Error al guardar URL temporal:', err);
                     return res.status(500).json({ error: 'Error al guardar URL temporal: ' + err.message });
@@ -411,7 +425,7 @@ app.post('/api/shorten', (req, res) => {
                     success: true,
                     shortUrl: `${getBaseUrl(req)}/${shortCode}`,
                     shortCode: shortCode,
-                    originalUrl: url,
+                    originalUrl: normalizedUrl,
                     temporary: true,
                     message: 'URL temporal creada. Inicia sesión para guardarla y acceder a más beneficios.'
                 });
@@ -423,6 +437,11 @@ app.post('/api/shorten', (req, res) => {
 // API: Obtener estadísticas
 app.get('/api/stats/:shortCode', (req, res) => {
     const { shortCode } = req.params;
+    
+    // Validar shortCode para prevenir SQL injection
+    if (!isValidShortCode(shortCode)) {
+        return res.status(400).json({ error: 'Código corto inválido' });
+    }
     
     db.get('SELECT * FROM urls WHERE short_code = ?', [shortCode], (err, row) => {
         if (err) {
@@ -480,6 +499,11 @@ app.delete('/api/urls/:shortCode', (req, res) => {
     const { shortCode } = req.params;
     const userId = (auth0ConfigValid && req.oidc && req.oidc.isAuthenticated()) ? req.oidc.user.sub : null;
     
+    // Validar shortCode para prevenir SQL injection
+    if (!isValidShortCode(shortCode)) {
+        return res.status(400).json({ error: 'Código corto inválido' });
+    }
+    
     if (!shortCode) {
         return res.status(400).json({ error: 'Código corto es requerido' });
     }
@@ -524,6 +548,11 @@ app.get('/api/qr/:shortCode', async (req, res) => {
     
     console.log('🎯 QR request para shortCode:', shortCode);
     
+    // Validar shortCode para prevenir SQL injection
+    if (!isValidShortCode(shortCode)) {
+        return res.status(400).json({ error: 'Código corto inválido' });
+    }
+    
     if (!shortCode) {
         return res.status(400).json({ error: 'Código corto es requerido' });
     }
@@ -560,6 +589,11 @@ app.get('/api/qr/:shortCode', async (req, res) => {
 app.get('/:shortCode', (req, res) => {
     const { shortCode } = req.params;
     
+    // Validar shortCode para prevenir SQL injection y ataques
+    if (!isValidShortCode(shortCode)) {
+        return res.status(404).send('URL no encontrada');
+    }
+    
     db.get('SELECT * FROM urls WHERE short_code = ?', [shortCode], (err, row) => {
         if (err) {
             return res.status(500).send('Error del servidor');
@@ -567,6 +601,18 @@ app.get('/:shortCode', (req, res) => {
         
         if (!row) {
             return res.status(404).send('URL no encontrada');
+        }
+        
+        // Prevenir open redirect - solo permitir http y https
+        const originalUrl = row.original_url;
+        try {
+            const urlObj = new URL(originalUrl);
+            if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+                console.error('⚠️ Intento de open redirect bloqueado:', originalUrl);
+                return res.status(400).send('URL no válida');
+            }
+        } catch (e) {
+            return res.status(400).send('URL no válida');
         }
         
         // Incrementar contador de clicks y actualizar última fecha de acceso
@@ -578,7 +624,7 @@ app.get('/:shortCode', (req, res) => {
         });
         
         // Redirigir a la URL original
-        res.redirect(row.original_url);
+        res.redirect(originalUrl);
     });
 });
 
