@@ -17,6 +17,7 @@ Un acortador de URLs moderno y completamente funcional con autenticación opcion
 - 🔒 **Seguro** - Headers de seguridad, rate limiting y validación
 
 ## 🚀 Demo
+<img width="1918" height="911" alt="image" src="https://github.com/user-attachments/assets/02997cec-7123-4540-a002-eda068644d49" />
 
 **[Ver demo en vivo](https://fis-url.vercel.app)**
 
