@@ -14,6 +14,7 @@
     --space-8: 64px;
 
     /* OpenCode Colors */
+    --oc-dark: #1f2937;
     --oc-light: #ffffff;
     --oc-surface: #ffffff;
     --oc-border: #e5e7eb;
@@ -21,7 +22,9 @@
     --oc-text: #1f2937;
     --oc-primary: #667eea;
     --oc-secondary: #764ba2;
-}
+
+    /* OpenCode Border Radius */
+    --radius-4: 16px;
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
@@ -723,14 +726,16 @@ body {
     font-size: 0.8rem;
 }
 
-/* Notifications */
+/* Notifications - OpenCode Style */
 .notification {
     position: fixed;
-    top: 30px;
-    right: 30px;
-    padding: 15px 25px;
-    border-radius: 15px;
-    color: white;
+    top: var(--space-6);
+    right: var(--space-6);
+    padding: var(--space-4) var(--space-5);
+    background: var(--oc-dark);
+    color: var(--oc-light);
+    border: 1px solid var(--oc-border);
+    border-radius: var(--radius-4);
     font-weight: 600;
     transform: translateX(500px);
     opacity: 0;
@@ -750,18 +755,129 @@ body {
 
 .notification.success {
     background: linear-gradient(135deg, #28a745, #20c997);
+    border-color: #28a745;
 }
 
 .notification.error {
     background: linear-gradient(135deg, #dc3545, #e74c3c);
+    border-color: #dc3545;
 }
 
 .notification.warning {
     background: linear-gradient(135deg, #ff9800, #f57c00);
+    border-color: #ff9800;
 }
 
-/* Animations */
-@keyframes fadeInDown {
+/* QR Modal - OpenCode Style */
+.qr-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.qr-modal-content {
+    background: var(--oc-surface);
+    border: 1px solid var(--oc-border);
+    border-radius: var(--radius-4);
+    max-width: 400px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideIn 0.3s ease;
+}
+
+.qr-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-5) var(--space-5) var(--space-4);
+    border-bottom: 1px solid var(--oc-border);
+}
+
+.qr-modal-header h3 {
+    margin: 0;
+    color: var(--oc-text);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.qr-modal-body {
+    padding: var(--space-5);
+    text-align: center;
+}
+
+.qr-modal-image {
+    max-width: 100%;
+    width: 250px;
+    border: 3px solid var(--oc-secondary);
+    border-radius: var(--radius-4);
+    padding: var(--space-4);
+    background: white;
+    margin-bottom: var(--space-4);
+}
+
+.qr-url {
+    color: var(--oc-primary);
+    font-weight: 600;
+    word-break: break-all;
+    margin: var(--space-4) 0;
+    padding: var(--space-4);
+    background: #f8f9ff;
+    border-radius: var(--space-3);
+    border-left: 4px solid #17a2b8;
+}
+
+.qr-modal-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: var(--space-5);
+}
+
+.qr-modal-actions button {
+    min-width: 120px;
+}
+
+.close-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--space-2);
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.close-btn:hover {
+    background: #c82333;
+}
+
+/* Modal Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
     from {
         opacity: 0;
         transform: translateY(-30px);
