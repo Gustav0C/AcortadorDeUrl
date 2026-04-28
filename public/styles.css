@@ -340,12 +340,15 @@ button:focus-visible {
 
 .result-container {
     display: flex;
-    gap: 30px;
+    flex-wrap: wrap;
+    gap: var(--space-5);
     align-items: flex-start;
+    justify-content: space-between;
 }
 
 .result-main {
     flex: 1;
+    min-width: 300px;
     background: var(--oc-surface);
     border-radius: var(--radius-4);
     padding: 30px;
@@ -416,9 +419,10 @@ button:focus-visible {
 
 /* QR Section */
 .qr-section {
-    flex: 0 0 300px;
+    flex: 0 0 auto;
+    min-width: 250px;
     background: var(--oc-surface);
-    border-radius: 20px;
+    border-radius: var(--radius-4);
     padding: 30px;
     border: 1px solid var(--oc-border);
     text-align: center;
@@ -959,11 +963,12 @@ button:focus-visible {
     
     .result-container {
         flex-direction: column;
-        gap: 20px;
+        justify-content: stretch;
     }
     
     .qr-section {
         flex: none;
+        width: 100%;
     }
     
     .input-container {
