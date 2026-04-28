@@ -2,6 +2,25 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+
+    /* OpenCode Design System - Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --space-8: 64px;
+
+    /* OpenCode Colors */
+    --oc-light: #ffffff;
+    --oc-surface: #ffffff;
+    --oc-border: #e5e7eb;
+    --oc-gray: #6b7280;
+    --oc-text: #1f2937;
+    --oc-primary: #667eea;
+    --oc-secondary: #764ba2;
 }
 
 body {
@@ -19,17 +38,16 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: var(--space-7) var(--space-4);
 }
 
 /* Header */
 .header {
-    text-align: center;
+    text-align: left;
     margin-bottom: 50px;
-    color: white;
+    color: var(--oc-light);
     animation: fadeInDown 0.8s ease-out;
     width: 100%;
-    max-width: 800px;
 }
 
 .header-content {
@@ -46,13 +64,14 @@ body {
 }
 
 .brand h1 {
-    font-size: 3rem;
-    font-weight: 300;
+    font-size: 38px;
+    font-weight: 700;
     margin-bottom: 10px;
     text-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 .brand p {
+    color: var(--oc-gray);
     font-size: 1.2rem;
     opacity: 0.9;
     margin-bottom: 10px;
@@ -235,7 +254,7 @@ body {
 /* Main Content */
 .main-content {
     width: 100%;
-    max-width: 800px;
+    max-width: 900px;
     position: relative;
 }
 
@@ -395,7 +414,8 @@ body {
 /* QR Section */
 .qr-section {
     flex: 0 0 300px;
-    background: white;
+    background: var(--oc-surface);
+    border: 1px solid var(--oc-border);
     border-radius: 20px;
     padding: 30px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
@@ -563,7 +583,8 @@ body {
 
 /* History Section */
 .history-section {
-    background: white;
+    background: var(--oc-surface);
+    border: 1px solid var(--oc-border);
     border-radius: 20px;
     padding: 30px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
