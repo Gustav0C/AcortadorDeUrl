@@ -16,9 +16,11 @@
     --oc-blue: #007aff;
     --oc-blue-hover: #0056b3;
     --oc-blue-active: #004085;
-    --oc-danger: #ff3b30;
+--oc-danger: #ff3b30;
     --oc-success: #30d158;
     --oc-warning: #ff9f0a;
+    --oc-primary: #764ba2;
+    --oc-info: #17a2b8;
     --radius-4: 4px;
     --radius-6: 6px;
     --space-1: 4px;
@@ -739,6 +741,30 @@ a:hover {
     border: 2px solid var(--oc-warning);
 }
 
+/* Dark mode notifications */
+.notification.dark {
+    background: var(--oc-dark);
+    color: var(--oc-light);
+}
+
+.notification.dark.success {
+    background: var(--oc-dark);
+    color: var(--oc-success);
+    border: 2px solid var(--oc-success);
+}
+
+.notification.dark.error {
+    background: var(--oc-dark);
+    color: var(--oc-danger);
+    border: 2px solid var(--oc-danger);
+}
+
+.notification.dark.warning {
+    background: var(--oc-dark);
+    color: var(--oc-warning);
+    border: 2px solid var(--oc-warning);
+}
+
 /* QR Modal */
 .qr-modal {
     position: fixed;
@@ -755,13 +781,14 @@ a:hover {
 }
 
 .qr-modal-content {
-    background: white;
+    background: var(--oc-light);
     border-radius: 20px;
     max-width: 400px;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
     animation: slideIn 0.3s ease;
+    color: var(--oc-dark);
 }
 
 .qr-modal-header {
@@ -769,20 +796,20 @@ a:hover {
     justify-content: space-between;
     align-items: center;
     padding: 20px 25px 15px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--oc-border);
 }
 
 .qr-modal-header h3 {
     margin: 0;
-    color: #333;
+    color: var(--oc-dark);
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
 .close-btn {
-    background: #dc3545;
-    color: white;
+    background: var(--oc-danger);
+    color: var(--oc-light);
     border: none;
     padding: 8px 10px;
     border-radius: 8px;
@@ -791,7 +818,7 @@ a:hover {
 }
 
 .close-btn:hover {
-    background: #c82333;
+    background: var(--oc-dark);
 }
 
 .qr-modal-body {
@@ -802,22 +829,22 @@ a:hover {
 .qr-modal-image {
     max-width: 100%;
     width: 250px;
-    border: 3px solid #764ba2;
+    border: 3px solid var(--oc-primary);
     border-radius: 15px;
     padding: 15px;
-    background: white;
+    background: var(--oc-light);
     margin-bottom: 15px;
 }
 
 .qr-url {
-    color: #667eea;
+    color: var(--oc-primary);
     font-weight: 600;
     word-break: break-all;
     margin: 15px 0;
     padding: 15px;
-    background: #f8f9ff;
+    background: var(--oc-gray);
     border-radius: 10px;
-    border-left: 4px solid #17a2b8;
+    border-left: 4px solid var(--oc-info);
 }
 
 .qr-modal-actions {
