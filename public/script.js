@@ -1,3 +1,5 @@
+const { isValidUrl, escapeHtml, buildUrlsHtml, getShortCodeFromUrl } = window.AppUtils;
+
 // Variables globales
 let currentUrls = [];
 let currentQRData = null;
@@ -225,16 +227,6 @@ async function shortenUrl() {
     }
 }
 
-// Función para validar URL
-function isValidUrl(string) {
-    try {
-        const url = new URL(string);
-        return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch (_) {
-        return false;
-    }
-}
-
 // Función para copiar al portapapeles
 async function copyToClipboard() {
     const shortUrl = document.getElementById('shortUrl').textContent;
@@ -266,7 +258,7 @@ async function generateQR() {
     }
     
     // Extraer el código corto de la URL
-    const shortCode = shortUrl.split('/').pop();
+    const shortCode = getShortCodeFromUrl(shortUrl);
     
     try {
         const response = await fetchWithTimeout(`/api/qr/${shortCode}`);
@@ -296,7 +288,7 @@ function downloadQR() {
     }
     
     const shortUrl = document.getElementById('shortUrl').textContent;
-    const shortCode = shortUrl.split('/').pop();
+    const shortCode = getShortCodeFromUrl(shortUrl);
     
     // Crear elemento de descarga
     const link = document.createElement('a');
@@ -502,47 +494,10 @@ async function loadUrls() {
     }
 }
 
-// Función para sanitizar HTML y prevenir XSS
-function escapeHtml(text) {
-    if (text == null) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
-}
-
 // Función para renderizar lista de URLs
 function renderUrls(urls, customMessage = null) {
     const urlsList = document.getElementById('urlsList');
-    
-    if (urls.length === 0) {
-        const message = customMessage || 'No hay URLs creadas aún';
-        urlsList.innerHTML = `<p style="text-align: center; color: #666; padding: 20px;">${escapeHtml(message)}</p>`;
-        return;
-    }
-    
-    urlsList.innerHTML = urls.map(url => {
-        const createdDate = new Date(url.created_at).toLocaleDateString('es-ES');
-        const shortUrl = `${window.location.origin}/${url.short_code}`;
-        
-        return `
-            <div class="url-item">
-                <div class="url-header">
-                    <a href="${escapeHtml(shortUrl)}" target="_blank" class="url-short">${escapeHtml(shortUrl)}</a>
-                    <div class="url-actions">
-                        <span class="url-clicks">${escapeHtml(String(url.clicks))} clicks</span>
-                        <button onclick="showQRFromHistory('${escapeHtml(url.short_code)}')" class="qr-btn" title="Ver código QR">
-                            <i class="fas fa-qrcode"></i>
-                        </button>
-                        <button onclick="deleteUrl('${escapeHtml(url.short_code)}')" class="delete-btn" title="Eliminar URL">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="url-original">${escapeHtml(url.original_url)}</div>
-                <div class="url-date">Creada: ${escapeHtml(createdDate)}</div>
-            </div>
-        `;
-    }).join('');
+    urlsList.innerHTML = buildUrlsHtml(urls, customMessage, window.location.origin);
 }
 
 // Event listeners

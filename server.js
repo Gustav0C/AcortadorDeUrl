@@ -2,23 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 
-// Usar nanoid si está disponible, si no usar shortid como fallback
-let generateShortCode;
-try {
-    const { customAlphabet } = require('nanoid');
-    const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 10);
-    generateShortCode = () => nanoid();
-} catch (e) {
-    // Fallback a shortid si nanoid falla (Vercel)
-    const shortid = require('shortid');
-    generateShortCode = () => shortid.generate();
-}
+const { isValidUrl, normalizeUrl } = require('./src/utils/url');
+const { createShortCodeGenerator, isValidShortCode } = require('./src/utils/shortCode');
+
+const generateShortCode = createShortCodeGenerator();
 
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const path = require('path');
-const validator = require('url-validator');
 const QRCode = require('qrcode');
 const { auth, requiresAuth } = require('express-openid-connect');
 
@@ -228,20 +220,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
-// Función para validar URL
-function isValidURL(string) {
-    try {
-        return validator(string);
-    } catch (err) {
-        return false;
-    }
-}
-
-// Función para validar shortCode (solo alphanumeric)
-function isValidShortCode(string) {
-    return /^[a-zA-Z0-9]+$/.test(string) && string.length <= 20;
-}
-
 // Rutas de fallback para Auth0 en caso de errores
 app.get('/login', (req, res) => {
     if (!auth0ConfigValid) {
@@ -326,19 +304,12 @@ app.post('/api/shorten', (req, res) => {
         return res.status(400).json({ error: 'URL excede el límite máximo de caracteres' });
     }
     
-    if (!isValidURL(url)) {
+    if (!isValidUrl(url)) {
         return res.status(400).json({ error: 'URL no válida' });
     }
-    
+
     // Normalizar URL antes de guardar (sanitización adicional)
-    let normalizedUrl = url.trim();
-    try {
-        const urlObj = new URL(normalizedUrl);
-        // Forzar protocolos válidos y eliminar fragmentos
-        normalizedUrl = urlObj.protocol + '//' + urlObj.hostname + urlObj.pathname + urlObj.search;
-    } catch (e) {
-        // Si falla, usar la original validada
-    }
+    const normalizedUrl = normalizeUrl(url);
     
     // Solo verificar URLs existentes si el usuario está autenticado
     if (userId) {
@@ -400,14 +371,7 @@ app.post('/api/shorten', (req, res) => {
             }
             
             // Generar código corto para URL temporal
-            let shortCode;
-            try {
-                shortCode = generateShortCode();
-            } catch (e) {
-                // Fallback si generateShortCode falla
-                const shortid = require('shortid');
-                shortCode = shortid.generate();
-            }
+            const shortCode = generateShortCode();
             
             console.log('🔄 Generando URL temporal');
             
