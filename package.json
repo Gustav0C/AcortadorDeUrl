@@ -8,7 +8,10 @@
     "dev": "node server.js",
     "build": "node build.js",
     "build:static": "node build.js",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "vitest run",
+    "test:backend": "vitest run tests/backend",
+    "test:frontend": "vitest run tests/frontend",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [
     "url-shortener",
@@ -43,5 +46,10 @@
     "shortid": "^2.2.17",
     "sqlite3": "^5.1.7",
     "url-validator": "^2.0.3"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^1.6.0",
+    "jsdom": "^24.0.0",
+    "vitest": "^1.6.0"
   }
 }
