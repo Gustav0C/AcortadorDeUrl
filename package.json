@@ -34,6 +34,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
@@ -44,7 +45,7 @@
     "path": "^0.12.7",
     "qrcode": "^1.5.4",
     "shortid": "^2.2.17",
-    "sqlite3": "^5.1.7",
+    "@libsql/client": "^0.14.0",
     "url-validator": "^2.0.3"
   },
   "devDependencies": {

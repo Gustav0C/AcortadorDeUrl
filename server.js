@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { createClient } = require('@libsql/client');
 
 const { isValidUrl, normalizeUrl } = require('./src/utils/url');
 const { createShortCodeGenerator, isValidShortCode } = require('./src/utils/shortCode');
@@ -33,7 +33,7 @@ function getBaseUrl(req) {
 // Configuración de seguridad para producción
 if (isProduction) {
     app.set('trust proxy', 1);
-    
+
     // Headers de seguridad
     app.use((req, res, next) => {
         res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -42,13 +42,13 @@ if (isProduction) {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         next();
     });
-    
+
     console.log('🔒 Configuración de seguridad de producción activada');
 }
 
 // Verificar configuración de Auth0
-let auth0ConfigValid = process.env.AUTH0_SECRET && 
-                       process.env.AUTH0_CLIENT_ID && 
+let auth0ConfigValid = process.env.AUTH0_SECRET &&
+                       process.env.AUTH0_CLIENT_ID &&
                        process.env.AUTH0_CLIENT_SECRET &&
                        process.env.AUTH0_ISSUER_BASE_URL &&
                        process.env.AUTH0_SECRET !== 'tu-secret-largo-y-aleatorio-aqui-cambialo-por-seguridad' &&
@@ -103,7 +103,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Rate limiting para prevenir abuse
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // máximo 100 requests por ventana por IP
+    max: 100, // max 100 requests per window per IP
     message: { error: 'Demasiadas solicitudes. Por favor intenta más tarde.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -123,85 +123,86 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false, // Allow embedding
 }));
 
-// Configurar la base de datos SQLite
-let dbPath = process.env.NODE_ENV === 'production' ? '/tmp/urls.db' : './urls.db';
+// Configurar la base de datos Turso
+let db;
 
-// Validar que el path sea seguro solo en desarrollo local
-if (process.env.NODE_ENV !== 'production') {
-    const pathValidation = /^(\/tmp\/|\.\/)[a-zA-Z0-9_-]*\.db$/;
-    if (dbPath && !pathValidation.test(dbPath)) {
-        dbPath = './urls.db';
+function initDatabase() {
+    const databaseUrl = process.env.TURSO_DATABASE_URL;
+    const authToken = process.env.TURSO_AUTH_TOKEN;
+
+    if (databaseUrl && authToken) {
+        // Usar Turso en producción
+        db = createClient({
+            url: databaseUrl,
+            authToken: authToken
+        });
+        console.log('Conectado a Turso (libSQL).');
+    } else {
+        // Fallback a SQLite local para desarrollo
+        const dbPath = process.env.NODE_ENV !== 'production' ? './urls.db' : '/tmp/urls.db';
+
+        // Validar que el path sea seguro solo en desarrollo local
+        if (process.env.NODE_ENV !== 'production') {
+            const pathValidation = /^(\/tmp\/|\.\/)[a-zA-Z0-9_-]*\.db$/;
+            if (dbPath && !pathValidation.test(dbPath)) {
+                console.warn('Path de DB no seguro, usando ./urls.db');
+            }
+        }
+
+        db = createClient({
+            url: `file:${dbPath}`
+        });
+        console.log('Conectado a SQLite local:', dbPath);
     }
+
+    return db;
 }
 
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('❌ Error al conectar con la base de datos:', err.message);
-    } else {
-        console.log('Conectado a la base de datos SQLite.');
-        
-        // Migración robusta: verificar y agregar columna ip_address si no existe
-        db.all("PRAGMA table_info(urls)", (err, columns) => {
-            if (err) {
-                console.error('❌ Error al verificar estructura de tabla:', err.message);
-                return;
+// Inicializar base de datos y ejecutar migraciones
+async function setupDatabase() {
+    try {
+        // Verificar estructura de la tabla
+        const tableInfo = await db.execute("PRAGMA table_info(urls)");
+
+        const columnNames = tableInfo.rows ? tableInfo.rows.map(col => col.name) : [];
+
+        // Si no existe la columna ip_address, ejecutar migración
+        if (!columnNames.includes('ip_address')) {
+            console.log('🔄 Migrando base de datos - agregando columna ip_address...');
+
+            // Crear nueva tabla con todas las columnas
+            await db.execute(`CREATE TABLE IF NOT EXISTS urls_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                original_url TEXT NOT NULL,
+                short_code TEXT UNIQUE NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                clicks INTEGER DEFAULT 0,
+                last_accessed DATETIME,
+                user_id TEXT DEFAULT NULL,
+                ip_address TEXT DEFAULT NULL
+            )`);
+
+            // Copiar datos de la tabla original si existe
+            try {
+                await db.execute(`INSERT INTO urls_new (id, original_url, short_code, created_at, clicks, last_accessed, user_id, ip_address)
+                    SELECT id, original_url, short_code, created_at, clicks, last_accessed, user_id, NULL FROM urls`);
+            } catch (e) {
+                // Tabla original puede no existir, es normal
             }
-            
-            const columnNames = columns.map(col => col.name);
-            
-            if (!columnNames.includes('ip_address')) {
-                // Crear tabla nueva con todas las columnas y copiar datos
-                console.log('🔄 Migrando base de datos - agregando columna ip_address...');
-                
-                // Primero crear la nueva tabla
-                db.run(`CREATE TABLE IF NOT EXISTS urls_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    original_url TEXT NOT NULL,
-                    short_code TEXT UNIQUE NOT NULL,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    clicks INTEGER DEFAULT 0,
-                    last_accessed DATETIME,
-                    user_id TEXT DEFAULT NULL,
-                    ip_address TEXT DEFAULT NULL
-                )`, (err) => {
-                    if (err) {
-                        console.error('❌ Error al crear tabla temporal:', err.message);
-                        return;
-                    }
-                    
-                    // Copiar datos de la tabla original
-                    db.run(`INSERT INTO urls_new (id, original_url, short_code, created_at, clicks, last_accessed, user_id, ip_address)
-                            SELECT id, original_url, short_code, created_at, clicks, last_accessed, user_id, NULL FROM urls`, (err) => {
-                        if (err) {
-                            console.error('❌ Error al copiar datos:', err.message);
-                            return;
-                        }
-                        
-                        // Eliminar tabla original y renombrar la nueva
-                        db.run('DROP TABLE urls', (err) => {
-                            if (err) {
-                                console.error('❌ Error al eliminar tabla original:', err.message);
-                                return;
-                            }
-                            
-                            db.run('ALTER TABLE urls_new RENAME TO urls', (err) => {
-                                if (err) {
-                                    console.error('❌ Error al renombrar tabla:', err.message);
-                                    return;
-                                }
-                                
-                                console.log('✅ Migración completada - columna ip_address agregada');
-                            });
-                        });
-                    });
-                });
-            } else {
-                console.log('✅ Tabla URLs verificada (ip_address ya existe)');
+
+            // Eliminar tabla original y renombrar
+            try {
+                await db.execute('DROP TABLE urls');
+            } catch (e) {
+                // Tabla original puede no existir
             }
-        });
-        
-        // Crear la tabla si no existe (solo si es base de datos nueva)
-        db.run(`CREATE TABLE IF NOT EXISTS urls (
+
+            await db.execute('ALTER TABLE urls_new RENAME TO urls');
+            console.log('✅ Migración completada - columna ip_address agregada');
+        }
+
+        // Crear tabla si no existe
+        await db.execute(`CREATE TABLE IF NOT EXISTS urls (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             original_url TEXT NOT NULL,
             short_code TEXT UNIQUE NOT NULL,
@@ -210,15 +211,17 @@ const db = new sqlite3.Database(dbPath, (err) => {
             last_accessed DATETIME,
             user_id TEXT DEFAULT NULL,
             ip_address TEXT DEFAULT NULL
-        )`, (err) => {
-            if (err) {
-                console.error('❌ Error al crear tabla:', err.message);
-            } else {
-                console.log('✅ Tabla URLs verificada/creada');
-            }
-        });
+        )`);
+
+        console.log('✅ Tabla URLs verificada/creada');
+    } catch (error) {
+        console.error('❌ Error al configurar la base de datos:', error.message);
     }
-});
+}
+
+// Inicializar DB antes de usarlo
+db = initDatabase();
+setupDatabase();
 
 // Rutas de fallback para Auth0 en caso de errores
 app.get('/login', (req, res) => {
@@ -248,22 +251,22 @@ app.get('/callback', (req, res) => {
 // Ruta para obtener información del usuario
 app.get('/api/user', (req, res) => {
     if (!auth0ConfigValid) {
-        return res.json({ 
+        return res.json({
             isAuthenticated: false,
             auth0Configured: false,
             message: 'Auth0 no configurado - funcionando en modo anónimo'
         });
     }
-    
+
     if (req.oidc && req.oidc.isAuthenticated()) {
         console.log('Usuario autenticado:', req.oidc.user); // Debug
-        res.json({ 
+        res.json({
             isAuthenticated: true,
             auth0Configured: true,
-            user: req.oidc.user 
+            user: req.oidc.user
         });
     } else {
-        res.json({ 
+        res.json({
             isAuthenticated: false,
             auth0Configured: true
         });
@@ -280,54 +283,51 @@ app.get('/api/debug', (req, res) => {
     res.json({
         status: 'OK',
         environment: process.env.NODE_ENV || 'development',
-        database: dbPath,
+        database: process.env.TURSO_DATABASE_URL ? 'Turso (libSQL)' : 'SQLite local',
         timestamp: new Date().toISOString(),
         host: req.get('host')
     });
 });
 
 // API: Acortar URL
-app.post('/api/shorten', (req, res) => {
+app.post('/api/shorten', async (req, res) => {
     const { url } = req.body;
     const userId = (auth0ConfigValid && req.oidc && req.oidc.isAuthenticated()) ? req.oidc.user.sub : null;
     // IP del usuario para limitar-anónimos (con fallback seguro)
     const userIP = req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
-    
+
     console.log('📝 [SHORTEN] Nueva solicitud de URL'); // Debug
-    
+
     if (!url) {
         return res.status(400).json({ error: 'URL es requerida' });
     }
-    
+
     // Validar longitud máxima de URL
     if (url.length > 10000) {
         return res.status(400).json({ error: 'URL excede el límite máximo de caracteres' });
     }
-    
+
     if (!isValidUrl(url)) {
         return res.status(400).json({ error: 'URL no válida' });
     }
 
     // Normalizar URL antes de guardar (sanitización adicional)
     const normalizedUrl = normalizeUrl(url);
-    
+
     // Solo verificar URLs existentes si el usuario está autenticado
     if (userId) {
         // Verificar si la URL ya existe para este usuario (usar normalizedUrl)
         const query = 'SELECT * FROM urls WHERE original_url = ? AND user_id = ?';
         const params = [normalizedUrl, userId];
-        
+
         console.log('🔍 Verificando URL existente en DB'); // Debug
-        
-        db.get(query, params, (err, row) => {
-            if (err) {
-                console.error('❌ Error en db.get:', err); // Debug
-                return res.status(500).json({ error: 'Error de base de datos: ' + err.message });
-            }
-            
-            console.log('✅ URL ya existe'); // Debug
-            
+
+        try {
+            const result = await db.execute({ sql: query, args: params });
+            const row = result.rows ? result.rows[0] : null;
+
             if (row) {
+                console.log('✅ URL ya existe'); // Debug
                 // URL ya existe, devolver el código existente
                 return res.json({
                     success: true,
@@ -336,86 +336,91 @@ app.post('/api/shorten', (req, res) => {
                     originalUrl: row.original_url
                 });
             }
-            
+
             // Crear nuevo código corto
             const shortCode = generateShortCode();
-            
+
             console.log('💾 Insertando nueva URL'); // Debug
-            
-            db.run('INSERT INTO urls (original_url, short_code, user_id) VALUES (?, ?, ?)', 
-                [normalizedUrl, shortCode, userId], function(err) {
-                if (err) {
-                    console.error('❌ Error en db.run:', err); // Debug
-                    return res.status(500).json({ error: 'Error al guardar URL: ' + err.message });
-                }
-                
-                console.log('✅ URL guardada exitosamente'); // Debug
-                
-                res.json({
-                    success: true,
-                    shortUrl: `${getBaseUrl(req)}/${shortCode}`,
-                    shortCode: shortCode,
-                    originalUrl: normalizedUrl
-                });
+
+            await db.execute({
+                sql: 'INSERT INTO urls (original_url, short_code, user_id) VALUES (?, ?, ?)',
+                args: [normalizedUrl, shortCode, userId]
             });
-        });
+
+            console.log('✅ URL guardada exitosamente'); // Debug
+
+            res.json({
+                success: true,
+                shortUrl: `${getBaseUrl(req)}/${shortCode}`,
+                shortCode: shortCode,
+                originalUrl: normalizedUrl
+            });
+        } catch (err) {
+            console.error('❌ Error en db.execute:', err); // Debug
+            return res.status(500).json({ error: 'Error de base de datos: ' + err.message });
+        }
     } else {
         // Usuario no autenticado - solo puede tener 1 URL temporal activa a la vez
         // Eliminar cualquier URL temporal anterior de esta IP (lógica "uno a la vez")
-        db.run('DELETE FROM urls WHERE user_id IS NULL AND ip_address = ?', 
-            [userIP], (err) => {
-            if (err) {
-                console.error('❌ Error al eliminar URL temporal anterior:', err);
-            } else {
-                console.log('🗑️ URL temporal anterior eliminada (si existía)');
-            }
-            
-            // Generar código corto para URL temporal
-            const shortCode = generateShortCode();
-            
-            console.log('🔄 Generando URL temporal');
-            
-            // Guardar URL temporal en la base de datos (sin user_id, pero con IP) - usar normalizedUrl
-            db.run('INSERT INTO urls (original_url, short_code, user_id, ip_address) VALUES (?, ?, NULL, ?)', 
-                [normalizedUrl, shortCode, userIP], function(err) {
-                if (err) {
-                    console.error('❌ Error al guardar URL temporal:', err);
-                    return res.status(500).json({ error: 'Error al guardar URL temporal: ' + err.message });
-                }
-                
-                console.log('✅ URL temporal guardada exitosamente');
-                
-                res.json({
-                    success: true,
-                    shortUrl: `${getBaseUrl(req)}/${shortCode}`,
-                    shortCode: shortCode,
-                    originalUrl: normalizedUrl,
-                    temporary: true,
-                    message: 'URL temporal creada. Inicia sesión para guardarla y acceder a más beneficios.'
-                });
+        try {
+            await db.execute({
+                sql: 'DELETE FROM urls WHERE user_id IS NULL AND ip_address = ?',
+                args: [userIP]
             });
-        });
+            console.log('🗑️ URL temporal anterior eliminada (si existía)');
+        } catch (err) {
+            console.error('❌ Error al eliminar URL temporal anterior:', err);
+        }
+
+        // Generar código corto para URL temporal
+        const shortCode = generateShortCode();
+
+        console.log('🔄 Generando URL temporal');
+
+        // Guardar URL temporal en la base de datos (sin user_id, pero con IP) - usar normalizedUrl
+        try {
+            await db.execute({
+                sql: 'INSERT INTO urls (original_url, short_code, user_id, ip_address) VALUES (?, ?, NULL, ?)',
+                args: [normalizedUrl, shortCode, userIP]
+            });
+
+            console.log('✅ URL temporal guardada exitosamente');
+
+            res.json({
+                success: true,
+                shortUrl: `${getBaseUrl(req)}/${shortCode}`,
+                shortCode: shortCode,
+                originalUrl: normalizedUrl,
+                temporary: true,
+                message: 'URL temporal creada. Inicia sesión para guardarla y acceder a más beneficios.'
+            });
+        } catch (err) {
+            console.error('❌ Error al guardar URL temporal:', err);
+            return res.status(500).json({ error: 'Error al guardar URL temporal: ' + err.message });
+        }
     }
 });
 
 // API: Obtener estadísticas
-app.get('/api/stats/:shortCode', (req, res) => {
+app.get('/api/stats/:shortCode', async (req, res) => {
     const { shortCode } = req.params;
-    
+
     // Validar shortCode para prevenir SQL injection
     if (!isValidShortCode(shortCode)) {
         return res.status(400).json({ error: 'Código corto inválido' });
     }
-    
-    db.get('SELECT * FROM urls WHERE short_code = ?', [shortCode], (err, row) => {
-        if (err) {
-            return res.status(500).json({ error: 'Error de base de datos' });
-        }
-        
+
+    try {
+        const result = await db.execute({
+            sql: 'SELECT * FROM urls WHERE short_code = ?',
+            args: [shortCode]
+        });
+        const row = result.rows ? result.rows[0] : null;
+
         if (!row) {
             return res.status(404).json({ error: 'URL no encontrada' });
         }
-        
+
         res.json({
             originalUrl: row.original_url,
             shortCode: row.short_code,
@@ -423,108 +428,110 @@ app.get('/api/stats/:shortCode', (req, res) => {
             createdAt: row.created_at,
             lastAccessed: row.last_accessed
         });
-    });
+    } catch (err) {
+        console.error('Error al obtener stats:', err);
+        return res.status(500).json({ error: 'Error de base de datos' });
+    }
 });
 
 // API: Listar URLs del usuario (solo si está autenticado)
-app.get('/api/urls', (req, res) => {
+app.get('/api/urls', async (req, res) => {
     const userId = (auth0ConfigValid && req.oidc && req.oidc.isAuthenticated()) ? req.oidc.user.sub : null;
-    
+
     console.log('📋 Solicitando lista de URLs'); // Debug
-    
+
     // Solo devolver URLs si el usuario está autenticado
     if (!userId) {
-        return res.json({ 
-            urls: [], 
+        return res.json({
+            urls: [],
             requiresAuth: true,
             message: 'Inicia sesión para ver tu historial de URLs'
         });
     }
-    
+
     const query = 'SELECT * FROM urls WHERE user_id = ? ORDER BY created_at DESC';
     const params = [userId];
-    
+
     console.log('🔍 Ejecutando query de URLs'); // Debug
-    
-    db.all(query, params, (err, rows) => {
-        if (err) {
-            console.error('❌ Error en db.all:', err); // Debug
-            return res.status(500).json({ error: 'Error de base de datos: ' + err.message });
-        }
-        
+
+    try {
+        const result = await db.execute({ sql: query, args: params });
+        const rows = result.rows || [];
+
         console.log('✅ URLs encontradas:', rows.length); // Debug
-        
+
         res.json({ urls: rows });
-    });
+    } catch (err) {
+        console.error('❌ Error en db.execute:', err); // Debug
+        return res.status(500).json({ error: 'Error de base de datos: ' + err.message });
+    }
 });
 
 // API: Eliminar URL
-app.delete('/api/urls/:shortCode', (req, res) => {
+app.delete('/api/urls/:shortCode', async (req, res) => {
     const { shortCode } = req.params;
     const userId = (auth0ConfigValid && req.oidc && req.oidc.isAuthenticated()) ? req.oidc.user.sub : null;
-    
+
     // Validar shortCode para prevenir SQL injection
     if (!isValidShortCode(shortCode)) {
         return res.status(400).json({ error: 'Código corto inválido' });
     }
-    
+
     if (!shortCode) {
         return res.status(400).json({ error: 'Código corto es requerido' });
     }
-    
+
     // Verificar si la URL existe y pertenece al usuario
-    const query = userId ? 
+    const selectQuery = userId ?
         'SELECT * FROM urls WHERE short_code = ? AND user_id = ?' :
         'SELECT * FROM urls WHERE short_code = ? AND user_id IS NULL';
-    const params = userId ? [shortCode, userId] : [shortCode];
-    
-    db.get(query, params, (err, row) => {
-        if (err) {
-            return res.status(500).json({ error: 'Error de base de datos' });
-        }
-        
+    const selectParams = userId ? [shortCode, userId] : [shortCode];
+
+    try {
+        const selectResult = await db.execute({ sql: selectQuery, args: selectParams });
+        const row = selectResult.rows ? selectResult.rows[0] : null;
+
         if (!row) {
             return res.status(404).json({ error: 'URL no encontrada o no autorizada' });
         }
-        
+
         // Eliminar la URL
-        const deleteQuery = userId ? 
+        const deleteQuery = userId ?
             'DELETE FROM urls WHERE short_code = ? AND user_id = ?' :
             'DELETE FROM urls WHERE short_code = ? AND user_id IS NULL';
-        
-        db.run(deleteQuery, params, function(err) {
-            if (err) {
-                return res.status(500).json({ error: 'Error al eliminar URL' });
-            }
-            
-            res.json({
-                success: true,
-                message: 'URL eliminada exitosamente',
-                deletedShortCode: shortCode
-            });
+
+        await db.execute({ sql: deleteQuery, args: selectParams });
+
+        res.json({
+            success: true,
+            message: 'URL eliminada exitosamente',
+            deletedShortCode: shortCode
         });
-    });
+    } catch (err) {
+        console.error('Error al eliminar URL:', err);
+        return res.status(500).json({ error: 'Error al eliminar URL' });
+    }
 });
 
 // API: Generar código QR para una URL corta
 app.get('/api/qr/:shortCode', async (req, res) => {
     const { shortCode } = req.params;
-    
+
     console.log('🎯 QR request para shortCode:', shortCode);
-    
+
     // Validar shortCode para prevenir SQL injection
     if (!isValidShortCode(shortCode)) {
         return res.status(400).json({ error: 'Código corto inválido' });
     }
-    
+
     if (!shortCode) {
         return res.status(400).json({ error: 'Código corto es requerido' });
     }
-    
+
     try {
         // Generar la URL corta
         const shortUrl = `${getBaseUrl(req)}/${shortCode}`;
-        
+
         // Generar código QR como Data URL (base64)
         const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, {
             width: 200,
@@ -534,9 +541,9 @@ app.get('/api/qr/:shortCode', async (req, res) => {
                 light: '#FFFFFF'
             }
         });
-        
+
         console.log('✅ QR generado exitosamente para:', shortUrl);
-        
+
         res.json({
             success: true,
             shortCode: shortCode,
@@ -550,23 +557,25 @@ app.get('/api/qr/:shortCode', async (req, res) => {
 });
 
 // Redirección: Cuando alguien accede a la URL corta
-app.get('/:shortCode', (req, res) => {
+app.get('/:shortCode', async (req, res) => {
     const { shortCode } = req.params;
-    
+
     // Validar shortCode para prevenir SQL injection y ataques
     if (!isValidShortCode(shortCode)) {
         return res.status(404).send('URL no encontrada');
     }
-    
-    db.get('SELECT * FROM urls WHERE short_code = ?', [shortCode], (err, row) => {
-        if (err) {
-            return res.status(500).send('Error del servidor');
-        }
-        
+
+    try {
+        const result = await db.execute({
+            sql: 'SELECT * FROM urls WHERE short_code = ?',
+            args: [shortCode]
+        });
+        const row = result.rows ? result.rows[0] : null;
+
         if (!row) {
             return res.status(404).send('URL no encontrada');
         }
-        
+
         // Prevenir open redirect - solo permitir http y https
         const originalUrl = row.original_url;
         try {
@@ -578,35 +587,35 @@ app.get('/:shortCode', (req, res) => {
         } catch (e) {
             return res.status(400).send('URL no válida');
         }
-        
+
         // Incrementar contador de clicks y actualizar última fecha de acceso
-        db.run('UPDATE urls SET clicks = clicks + 1, last_accessed = CURRENT_TIMESTAMP WHERE short_code = ?', 
-            [shortCode], (err) => {
-            if (err) {
-                console.error('Error al actualizar estadísticas:', err);
-            }
-        });
-        
+        try {
+            await db.execute({
+                sql: 'UPDATE urls SET clicks = clicks + 1, last_accessed = CURRENT_TIMESTAMP WHERE short_code = ?',
+                args: [shortCode]
+            });
+        } catch (err) {
+            console.error('Error al actualizar estadísticas:', err);
+        }
+
         // Redirigir a la URL original
         res.redirect(originalUrl);
-    });
+    } catch (err) {
+        console.error('Error en redirección:', err);
+        return res.status(500).send('Error del servidor');
+    }
 });
 
 // Iniciar el servidor
 app.listen(PORT, () => {
     console.log(`🚀 Acortador de URL ejecutándose en http://localhost:${PORT}`);
-    console.log(`📊 Base de datos: SQLite local (urls.db)`);
+    console.log(`📊 Base de datos: ${process.env.TURSO_DATABASE_URL ? 'Turso (libSQL)' : 'SQLite local'}`);
 });
 
 // Manejar cierre graceful
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
     console.log('\n🛑 Cerrando servidor...');
-    db.close((err) => {
-        if (err) {
-            console.error('Error al cerrar la base de datos:', err.message);
-        } else {
-            console.log('Base de datos cerrada.');
-        }
-        process.exit(0);
-    });
+    // Turso/SQLite no requiere close explícito con libsql client
+    console.log('Base de datos cerrada.');
+    process.exit(0);
 });
