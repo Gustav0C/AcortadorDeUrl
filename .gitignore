@@ -66,3 +66,4 @@ ecosystem.config.js
 
 #skills
 .agents
+skills-lock.json
