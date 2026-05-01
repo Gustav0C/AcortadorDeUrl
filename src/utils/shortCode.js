@@ -5,7 +5,7 @@ function createShortCodeGenerator() {
 }
 
 function isValidShortCode(value) {
-  return /^[a-zA-Z0-9]+$/.test(value) && value.length <= 20;
+  return /^[a-zA-Z0-9_-]+$/.test(value) && value.length <= 20;
 }
 
 module.exports = { createShortCodeGenerator, isValidShortCode };

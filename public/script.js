@@ -6,16 +6,41 @@ let currentQRData = null;
 let historyVisible = false;
 let currentUser = null;
 
+// ─── Theme Toggle ───────────────────────────────────────────────────────
+function initTheme() {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = saved || 'dark';
+    setTheme(theme);
+}
+
+function toggleTheme() {
+    const current = document.body.dataset.theme || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('theme', next);
+}
+
+function setTheme(theme) {
+    document.body.dataset.theme = theme;
+    const icon = document.getElementById('themeIcon');
+    if (icon) {
+        icon.className = theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+    }
+}
+
 // Función helper para fetch con timeout
 async function fetchWithTimeout(url, options = {}, timeout = 10000) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     
+    const fetchOptions = {
+        ...options,
+        signal: controller.signal
+    };
+    
     try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
-        });
+        const response = await fetch(url, fetchOptions);
         clearTimeout(id);
         return response;
     } catch (error) {
@@ -24,6 +49,33 @@ async function fetchWithTimeout(url, options = {}, timeout = 10000) {
             throw new Error('Tiempo de espera agotado');
         }
         throw error;
+    }
+}
+
+// Función wrapper con reintentos y exponential backoff para errores de Turso
+async function fetchWithRetry(url, options = {}, timeout = 10000, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetchWithTimeout(url, options, timeout);
+            // Si es error 401 (posible Turso), reintentar
+            if (response.status === 401) {
+                const data = await response.json();
+                if (data.error && (data.error.includes('Turso') || data.error.includes('unauthorized'))) {
+                    if (i < retries - 1) {
+                        const backoff = Math.min(1000 * Math.pow(2, i), 10000);
+                        console.log(`🔄 Reintento ${i + 1}/${retries} después de ${backoff}ms`);
+                        await new Promise(resolve => setTimeout(resolve, backoff));
+                        continue;
+                    }
+                }
+            }
+            return response;
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            const backoff = Math.min(1000 * Math.pow(2, i), 10000);
+            console.log(`🔄 Reintento ${i + 1}/${retries} después de ${backoff}ms debido a:`, error.message);
+            await new Promise(resolve => setTimeout(resolve, backoff));
+        }
     }
 }
 
@@ -98,17 +150,26 @@ function updateAuthUI(isAuthenticated, auth0Configured = true) {
 
 // Inicializar cuando se carga la página
 document.addEventListener('DOMContentLoaded', () => {
+    // Theme init (antes de todo para evitar flash de tema incorrecto)
+    initTheme();
+
     // Verificar si hay errores de Auth0 en la URL
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
-    
+
     if (error === 'auth0_not_configured') {
         showNotification('Auth0 no está configurado correctamente', 'error');
         // Limpiar la URL
         window.history.replaceState({}, document.title, window.location.pathname);
     }
-    
+
     loadUserInfo();
+
+    // Theme toggle event listener
+    const themeToggleBtn = document.getElementById('themeToggle');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', toggleTheme);
+    }
 });
 
 // Función para mostrar notificaciones
@@ -173,7 +234,7 @@ async function shortenUrl() {
     shortenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     
     try {
-        const response = await fetchWithTimeout('/api/shorten', {
+        const response = await fetchWithRetry('/api/shorten', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -261,7 +322,7 @@ async function generateQR() {
     const shortCode = getShortCodeFromUrl(shortUrl);
     
     try {
-        const response = await fetchWithTimeout(`/api/qr/${shortCode}`);
+        const response = await fetchWithRetry(`/api/qr/${shortCode}`);
         const data = await response.json();
         
         if (data.success) {
@@ -348,7 +409,7 @@ async function deleteUrl(shortCode) {
     }
     
     try {
-        const response = await fetchWithTimeout(`/api/urls/${shortCode}`, {
+        const response = await fetchWithRetry(`/api/urls/${shortCode}`, {
             method: 'DELETE'
         });
         
@@ -369,7 +430,7 @@ async function deleteUrl(shortCode) {
 // Función para mostrar QR desde historial
 async function showQRFromHistory(shortCode) {
     try {
-        const response = await fetchWithTimeout(`/api/qr/${encodeURIComponent(shortCode)}`);
+        const response = await fetchWithRetry(`/api/qr/${encodeURIComponent(shortCode)}`);
         const data = await response.json();
         
         if (data.success) {
@@ -466,7 +527,7 @@ async function loadUrls() {
     const urlsList = document.getElementById('urlsList');
     
     try {
-        const response = await fetchWithTimeout('/api/urls');
+        const response = await fetchWithRetry('/api/urls');
         const data = await response.json();
         
         if (response.ok) {

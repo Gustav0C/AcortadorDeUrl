@@ -9,6 +9,7 @@ const generateShortCode = createShortCodeGenerator();
 
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
 const helmet = require('helmet');
 const path = require('path');
 const QRCode = require('qrcode');
@@ -103,7 +104,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Rate limiting para prevenir abuse
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // max 100 requests per window per IP
+    max: (req) => req.oidc?.isAuthenticated() ? 1000 : 100,
+    keyGenerator: (req) => {
+        if (req.oidc?.isAuthenticated()) {
+            return req.oidc.user.sub; // Usuario auth: por user_id
+        }
+        return ipKeyGenerator(req); // Usa el helper oficial para IPv6
+    },
     message: { error: 'Demasiadas solicitudes. Por favor intenta más tarde.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -166,9 +173,9 @@ async function setupDatabase() {
 
         const columnNames = tableInfo.rows ? tableInfo.rows.map(col => col.name) : [];
 
-        // Si no existe la columna ip_address, ejecutar migración
-        if (!columnNames.includes('ip_address')) {
-            console.log('🔄 Migrando base de datos - agregando columna ip_address...');
+        // Si no existe la columna ip_address o expires_at, ejecutar migración
+        if (!columnNames.includes('ip_address') || !columnNames.includes('expires_at')) {
+            console.log('🔄 Migrando base de datos - agregando columnas faltantes...');
 
             // Crear nueva tabla con todas las columnas
             await db.execute(`CREATE TABLE IF NOT EXISTS urls_new (
@@ -179,13 +186,14 @@ async function setupDatabase() {
                 clicks INTEGER DEFAULT 0,
                 last_accessed DATETIME,
                 user_id TEXT DEFAULT NULL,
-                ip_address TEXT DEFAULT NULL
+                ip_address TEXT DEFAULT NULL,
+                expires_at DATETIME DEFAULT NULL
             )`);
 
             // Copiar datos de la tabla original si existe
             try {
-                await db.execute(`INSERT INTO urls_new (id, original_url, short_code, created_at, clicks, last_accessed, user_id, ip_address)
-                    SELECT id, original_url, short_code, created_at, clicks, last_accessed, user_id, NULL FROM urls`);
+                await db.execute(`INSERT INTO urls_new (id, original_url, short_code, created_at, clicks, last_accessed, user_id, ip_address, expires_at)
+                    SELECT id, original_url, short_code, created_at, clicks, last_accessed, user_id, NULL, NULL FROM urls`);
             } catch (e) {
                 // Tabla original puede no existir, es normal
             }
@@ -198,7 +206,7 @@ async function setupDatabase() {
             }
 
             await db.execute('ALTER TABLE urls_new RENAME TO urls');
-            console.log('✅ Migración completada - columna ip_address agregada');
+            console.log('✅ Migración completada - columnas ip_address y expires_at agregadas');
         }
 
         // Crear tabla si no existe
@@ -210,10 +218,17 @@ async function setupDatabase() {
             clicks INTEGER DEFAULT 0,
             last_accessed DATETIME,
             user_id TEXT DEFAULT NULL,
-            ip_address TEXT DEFAULT NULL
+            ip_address TEXT DEFAULT NULL,
+            expires_at DATETIME DEFAULT NULL
         )`);
 
         console.log('✅ Tabla URLs verificada/creada');
+
+        // Crear índices para optimizar consultas
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_urls_user_id ON urls(user_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_urls_ip_address ON urls(ip_address)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_urls_expires_at ON urls(expires_at)');
+        console.log('✅ Índices de base de datos verificados/creados');
     } catch (error) {
         console.error('❌ Error al configurar la base de datos:', error.message);
     }
@@ -240,12 +255,28 @@ app.get('/logout', (req, res) => {
     next();
 });
 
-app.get('/callback', (req, res) => {
+app.get('/callback', async (req, res) => {
     if (!auth0ConfigValid) {
         return res.redirect('/?error=auth0_not_configured');
     }
-    // Si Auth0 está configurado, el middleware lo manejará
-    next();
+    
+    // El middleware de Auth0 ya procesó el callback y seteó req.oidc
+    // Migrar URLs temporales al hacer login
+    if (req.oidc && req.oidc.isAuthenticated()) {
+        try {
+            const userIP = req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+            const result = await db.execute({
+                sql: `UPDATE urls SET user_id = ? WHERE ip_address = ? AND user_id IS NULL AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)`,
+                args: [req.oidc.user.sub, userIP]
+            });
+            console.log(`✅ Migradas ${result.rowsAffected || 0} URLs temporales al iniciar sesión`);
+        } catch (err) {
+            console.error('❌ Error al migrar URLs temporales:', err);
+        }
+    }
+    
+    // Redirigir al home después del callback
+    res.redirect('/');
 });
 
 // Ruta para obtener información del usuario
@@ -343,7 +374,7 @@ app.post('/api/shorten', async (req, res) => {
             console.log('💾 Insertando nueva URL'); // Debug
 
             await db.execute({
-                sql: 'INSERT INTO urls (original_url, short_code, user_id) VALUES (?, ?, ?)',
+                sql: 'INSERT INTO urls (original_url, short_code, user_id, expires_at) VALUES (?, ?, ?, NULL)',
                 args: [normalizedUrl, shortCode, userId]
             });
 
@@ -379,9 +410,11 @@ app.post('/api/shorten', async (req, res) => {
 
         // Guardar URL temporal en la base de datos (sin user_id, pero con IP) - usar normalizedUrl
         try {
+            // Calcular fecha de expiración en JS (Turso no soporta datetime() en VALUES)
+            const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
             await db.execute({
-                sql: 'INSERT INTO urls (original_url, short_code, user_id, ip_address) VALUES (?, ?, NULL, ?)',
-                args: [normalizedUrl, shortCode, userIP]
+                sql: 'INSERT INTO urls (original_url, short_code, user_id, ip_address, expires_at) VALUES (?, ?, NULL, ?, ?)',
+                args: [normalizedUrl, shortCode, userIP, expiresAt]
             });
 
             console.log('✅ URL temporal guardada exitosamente');
@@ -449,7 +482,7 @@ app.get('/api/urls', async (req, res) => {
         });
     }
 
-    const query = 'SELECT * FROM urls WHERE user_id = ? ORDER BY created_at DESC';
+    const query = `SELECT * FROM urls WHERE user_id = ? AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP) ORDER BY created_at DESC`;
     const params = [userId];
 
     console.log('🔍 Ejecutando query de URLs'); // Debug
@@ -524,23 +557,26 @@ app.get('/api/qr/:shortCode', async (req, res) => {
         return res.status(400).json({ error: 'Código corto inválido' });
     }
 
-    if (!shortCode) {
-        return res.status(400).json({ error: 'Código corto es requerido' });
-    }
-
     try {
         // Generar la URL corta
         const shortUrl = `${getBaseUrl(req)}/${shortCode}`;
 
-        // Generar código QR como Data URL (base64)
-        const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, {
-            width: 200,
-            margin: 2,
-            color: {
-                dark: '#667eea',
-                light: '#FFFFFF'
-            }
-        });
+        console.log('📱 Generando QR para URL:', shortUrl);
+
+        // Generar código QR con timeout para evitar cuelgues
+        const qrCodeDataUrl = await Promise.race([
+            QRCode.toDataURL(shortUrl, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#667eea',
+                    light: '#FFFFFF'
+                }
+            }),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout generando QR')), 5000)
+            )
+        ]);
 
         console.log('✅ QR generado exitosamente para:', shortUrl);
 
@@ -551,8 +587,8 @@ app.get('/api/qr/:shortCode', async (req, res) => {
             qrCode: qrCodeDataUrl
         });
     } catch (error) {
-        console.error('❌ Error al generar QR:', error);
-        res.status(500).json({ error: 'Error al generar código QR' });
+        console.error('❌ Error al generar QR:', error.message);
+        res.status(500).json({ error: 'Error al generar código QR: ' + error.message });
     }
 });
 
@@ -574,6 +610,14 @@ app.get('/:shortCode', async (req, res) => {
 
         if (!row) {
             return res.status(404).send('URL no encontrada');
+        }
+
+        // Verificar si la URL ha expirado
+        if (row.expires_at) {
+            const expiresAt = new Date(row.expires_at);
+            if (expiresAt < new Date()) {
+                return res.status(410).send('Esta URL ha expirado');
+            }
         }
 
         // Prevenir open redirect - solo permitir http y https

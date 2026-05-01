@@ -4,23 +4,36 @@
     box-sizing: border-box;
 }
 
+/* ─── CSS Variables ─────────────────────────────────────────────────────────────── */
 :root {
+    /* Design tokens — dark theme (default) */
     --oc-dark: #201d1d;
     --oc-light: #fdfcfc;
     --oc-gray: #9a9898;
     --oc-muted: #6e6e73;
-    --oc-border: rgba(15, 0, 0, 0.12);
+    --oc-border: rgba(255, 255, 255, 0.12);
     --oc-outline: #646262;
     --oc-surface: #302c2c;
-    --oc-input-bg: #f8f7f7;
+    --oc-input-bg: #3a3838;
     --oc-blue: #007aff;
-    --oc-blue-hover: #0056b3;
-    --oc-blue-active: #004085;
---oc-danger: #ff3b30;
+    --oc-blue-hover: #00b2ff;
+    --oc-blue-active: #004999;
+    --oc-danger: #ff3b30;
     --oc-success: #30d158;
     --oc-warning: #ff9f0a;
     --oc-primary: #764ba2;
     --oc-info: #17a2b8;
+
+    /* Semantic tokens — dark theme */
+    --bg: var(--oc-dark);
+    --bg-alt: var(--oc-surface);
+    --text: var(--oc-light);
+    --text-muted: var(--oc-muted);
+    --surface: var(--oc-surface);
+    --input-bg: var(--oc-input-bg);
+    --input-text: var(--oc-dark);
+
+    /* Radius & Spacing */
     --radius-4: 4px;
     --radius-6: 6px;
     --space-1: 4px;
@@ -31,18 +44,45 @@
     --space-6: 32px;
     --space-7: 48px;
     --space-8: 64px;
+    --transition: 0.15s ease;
+    --transition-slow: 0.3s ease;
 }
 
+[data-theme="light"] {
+    /* Semantic tokens — light theme */
+    --bg: #f5f5f7;
+    --bg-alt: #e8e8ea;
+    --text: #1a1a1a;
+    --text-muted: #6b6b6f;
+    --surface: #fafafa;
+    --input-bg: #ffffff;
+    --input-text: #201d1d;
+
+    /* Design tokens — light theme */
+    --oc-surface: #f0f0f0;
+    --oc-input-bg: #ffffff;
+    --oc-border: rgba(60, 60, 67, 0.18);
+    --oc-outline: #a1a1a6;
+    --oc-gray: #8e8e93;
+    --oc-muted: #636366;
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────── */
 body {
-    font-family: "Berkeley Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    background: var(--oc-dark);
+    font-family:
+        "Berkeley Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo,
+        Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    background: var(--bg);
     min-height: 100vh;
-    color: var(--oc-light);
+    color: var(--text);
     overflow-x: hidden;
+    transition:
+        background var(--transition-slow),
+        color var(--transition-slow);
 }
 
 a {
-    color: var(--oc-light);
+    color: var(--text);
     text-decoration: underline;
 }
 
@@ -57,7 +97,7 @@ a:hover {
     color: var(--oc-blue);
 }
 
-/* App Container */
+/* ─── App Container ─────────────────────────────────────────────────────────────── */
 .app-container {
     min-height: 100vh;
     display: flex;
@@ -70,11 +110,11 @@ a:hover {
     width: 100%;
 }
 
-/* Header */
+/* ─── Header ─────────────────────────────────────────────────────────────── */
 .header {
     text-align: center;
     margin-bottom: 50px;
-    color: var(--oc-light);
+    color: var(--text);
     animation: fadeInDown 0.8s ease-out;
     width: 100%;
     max-width: 800px;
@@ -101,90 +141,15 @@ a:hover {
 
 .brand p {
     font-size: 1.2rem;
-    color: var(--oc-gray);
-    margin-bottom: 10px;
+    color: var(--text-muted);
+    font-weight: 300;
 }
 
-.github-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--oc-surface);
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    border: 1px solid var(--oc-border);
-}
-
-.github-badge i {
-    font-size: 1.1rem;
-}
-
-/* Info Banner */
-.info-banner {
-    background: var(--oc-light);
-    color: var(--oc-dark);
-    padding: 15px 20px;
-    border-radius: 10px;
-    margin-bottom: 30px;
+/* ─── Auth Extra ─────────────────────────────────────────────────────────────── */
+.auth-extra {
     display: flex;
     align-items: center;
     gap: 15px;
-    border: 1px solid var(--oc-border);
-    max-width: 800px;
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.info-banner i {
-    color: var(--oc-blue);
-    font-size: 1.2rem;
-}
-
-.github-link {
-    color: var(--oc-blue);
-    text-decoration: none;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.github-link:hover {
-    color: var(--oc-blue-hover);
-}
-
-/* GitHub promo styles */
-.github-promo {
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    text-align: center;
-}
-
-.github-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--oc-surface);
-    color: var(--oc-light);
-    padding: 12px 24px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 500;
-    border: 1px solid var(--oc-border);
-    margin-top: 10px;
-}
-
-.github-btn:hover {
-    background: var(--oc-dark);
-}
-
-.brand p {
-    font-size: 1.2rem;
-    color: var(--oc-gray);
-    font-weight: 300;
 }
 
 .auth-section {
@@ -193,11 +158,34 @@ a:hover {
     gap: 15px;
 }
 
+/* ─── Theme Toggle ─────────────────────────────────────────────────────────────── */
+.theme-toggle {
+    width: 36px;
+    height: 32px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--oc-border);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        background var(--transition),
+        border-color var(--transition);
+}
+
+.theme-toggle:hover {
+    border-color: var(--oc-outline);
+}
+
+/* ─── User Info ─────────────────────────────────────────────────────────────── */
 .user-info {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: var(--oc-surface);
+    background: var(--surface);
     padding: 8px 15px;
     border-radius: 25px;
     border: 1px solid var(--oc-border);
@@ -209,7 +197,7 @@ a:hover {
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--oc-border);
-    background: var(--oc-surface);
+    background: var(--surface);
 }
 
 .user-avatar:hover {
@@ -219,12 +207,12 @@ a:hover {
 .user-name {
     font-size: 0.9rem;
     font-weight: 500;
-    color: var(--oc-light);
+    color: var(--text);
 }
 
 .auth-btn {
-    background: var(--oc-surface);
-    color: var(--oc-light);
+    background: var(--surface);
+    color: var(--text);
     border: 2px solid var(--oc-border);
     padding: 8px 20px;
     border-radius: 25px;
@@ -235,7 +223,7 @@ a:hover {
 }
 
 .auth-btn:hover {
-    background: var(--oc-dark);
+    background: var(--bg-alt);
     border-color: var(--oc-outline);
 }
 
@@ -243,7 +231,7 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: var(--oc-surface);
+    background: var(--surface);
     color: var(--oc-warning);
     padding: 8px 15px;
     border-radius: 25px;
@@ -255,36 +243,21 @@ a:hover {
     color: var(--oc-warning);
 }
 
-@media (max-width: 640px) {
-    .brand h1 {
-        font-size: 24px;
-    }
-    
-    .app-container {
-        padding: var(--space-5) var(--space-3);
-    }
-}
-
-button:focus-visible {
-    outline: 1px solid var(--oc-blue);
-    outline-offset: 2px;
-}
-
-/* Main Content */
+/* ─── Main Content ─────────────────────────────────────────────────────────────── */
 .main-content {
     width: 100%;
     max-width: 800px;
     position: relative;
 }
 
-/* Input Section */
+/* ─── Input Section ─────────────────────────────────────────────────────────────── */
 .input-section {
     animation: fadeInUp 0.8s ease-out 0.2s both;
 }
 
 .input-container {
     display: flex;
-    background: var(--oc-input-bg);
+    background: var(--input-bg);
     border: 1px solid var(--oc-border);
     border-radius: var(--radius-6);
     padding: var(--space-2);
@@ -302,15 +275,15 @@ button:focus-visible {
     padding: 20px;
     font-size: 16px;
     background: transparent;
-    color: var(--oc-dark);
+    color: var(--text);
 }
 
 .url-input::placeholder {
-    color: var(--oc-gray);
+    color: var(--text-muted);
 }
 
 .shorten-btn {
-    background: var(--oc-dark);
+    background: var(--oc-primary);
     color: var(--oc-light);
     border: none;
     border-radius: var(--radius-4);
@@ -318,17 +291,18 @@ button:focus-visible {
     cursor: pointer;
     font-size: 1.2rem;
     min-width: 60px;
+    transition: filter 0.2s ease;
 }
 
 .shorten-btn:hover {
-    background: var(--oc-blue-hover);
+    filter: brightness(1.1);
 }
 
 .shorten-btn:active {
-    background: var(--oc-blue-active);
+    filter: brightness(0.9);
 }
 
-/* Result Section */
+/* ─── Result Section ─────────────────────────────────────────────────────────────── */
 .result-section {
     margin-top: 30px;
     animation: slideInUp 0.6s ease-out;
@@ -349,7 +323,7 @@ button:focus-visible {
 .result-main {
     flex: 1;
     min-width: 300px;
-    background: var(--oc-surface);
+    background: var(--surface);
     border-radius: var(--radius-4);
     padding: 30px;
     border: 1px solid var(--oc-border);
@@ -360,7 +334,7 @@ button:focus-visible {
     align-items: center;
     gap: 15px;
     padding: 20px;
-    background: var(--oc-input-bg);
+    background: var(--input-bg);
     border-radius: 15px;
     border-left: 4px solid var(--oc-blue);
     margin-bottom: 20px;
@@ -379,9 +353,10 @@ button:focus-visible {
     gap: 10px;
 }
 
-.copy-btn, .qr-btn {
-    background: var(--oc-dark);
-    color: var(--oc-light);
+.copy-btn,
+.qr-btn {
+    background: var(--surface);
+    color: var(--text);
     border: 1px solid var(--oc-border);
     border-radius: var(--radius-4);
     padding: 12px;
@@ -391,16 +366,18 @@ button:focus-visible {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background var(--transition);
 }
 
-.qr-btn {
-    background: var(--oc-dark);
+.copy-btn:hover,
+.qr-btn:hover {
+    background: var(--bg-alt);
 }
 
 .new-url-btn {
     background: transparent;
-    color: var(--oc-blue);
-    border: 2px solid var(--oc-blue);
+    color: var(--oc-primary);
+    border: 2px solid var(--oc-primary);
     border-radius: 10px;
     padding: 12px 20px;
     cursor: pointer;
@@ -410,18 +387,19 @@ button:focus-visible {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    transition: all var(--transition);
 }
 
 .new-url-btn:hover {
-    background: var(--oc-blue);
+    background: var(--oc-primary);
     color: var(--oc-light);
 }
 
-/* QR Section */
+/* ─── QR Section ─────────────────────────────────────────────────────────────── */
 .qr-section {
     flex: 0 0 auto;
     min-width: 250px;
-    background: var(--oc-surface);
+    background: var(--surface);
     border-radius: var(--radius-4);
     padding: 30px;
     border: 1px solid var(--oc-border);
@@ -451,8 +429,8 @@ button:focus-visible {
 }
 
 .download-btn {
-    background: var(--oc-dark);
-    color: var(--oc-light);
+    background: var(--surface);
+    color: var(--text);
     border: 1px solid var(--oc-border);
     border-radius: var(--radius-4);
     padding: 12px 20px;
@@ -461,21 +439,26 @@ button:focus-visible {
     display: flex;
     align-items: center;
     gap: 8px;
+    transition: background var(--transition);
 }
 
+.download-btn:hover {
+    background: var(--bg-alt);
+}
 
-/* Login Promotion */
+/* ─── Login Promotion ─────────────────────────────────────────────────────────────── */
 .login-promotion {
     margin: 40px 0;
     animation: fadeInUp 0.8s ease-out 0.4s both;
 }
 
 .promo-card {
-    background: var(--oc-surface);
+    background: var(--surface);
     border: 1px solid var(--oc-border);
     border-radius: var(--radius-4);
     padding: 30px;
     text-align: center;
+    transition: border-color var(--transition);
 }
 
 .promo-card:hover {
@@ -492,14 +475,14 @@ button:focus-visible {
 }
 
 .promo-content h3 {
-    color: var(--oc-light);
+    color: var(--text);
     font-size: 1.5rem;
     margin-bottom: 15px;
     font-weight: 600;
 }
 
 .promo-content p {
-    color: var(--oc-light);
+    color: var(--text-muted);
     font-size: 1.1rem;
     margin-bottom: 20px;
 }
@@ -515,7 +498,7 @@ button:focus-visible {
 }
 
 .promo-content ul li {
-    color: var(--oc-light);
+    color: var(--text);
     padding: 8px 0;
     display: flex;
     align-items: center;
@@ -539,39 +522,40 @@ button:focus-visible {
     font-weight: 600;
     cursor: pointer;
     margin-top: 20px;
+    transition: filter 0.2s ease;
 }
 
 .promo-login-btn:hover {
-    background: var(--oc-blue-hover);
+    filter: brightness(1.1);
 }
 
 .promo-login-btn i {
     margin-right: 8px;
 }
 
-/* History Toggle */
+/* ─── History ─────────────────────────────────────────────────────────────── */
 .history-toggle {
     text-align: center;
     margin: 40px 0 20px;
 }
 
 .toggle-btn {
-    background: var(--oc-surface);
-    color: var(--oc-light);
+    background: var(--surface);
+    color: var(--text);
     border: 2px solid var(--oc-border);
     border-radius: 15px;
     padding: 12px 25px;
     cursor: pointer;
     font-size: 1rem;
+    transition: background var(--transition);
 }
 
 .toggle-btn:hover {
-    background: var(--oc-dark);
+    background: var(--bg-alt);
 }
 
-/* History Section */
 .history-section {
-    background: var(--oc-surface);
+    background: var(--surface);
     border-radius: 20px;
     padding: 30px;
     border: 1px solid var(--oc-border);
@@ -592,7 +576,7 @@ button:focus-visible {
 }
 
 .history-header h3 {
-    color: var(--oc-dark);
+    color: var(--text);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -600,19 +584,20 @@ button:focus-visible {
 }
 
 .refresh-btn {
-    background: var(--oc-dark);
-    color: var(--oc-light);
+    background: var(--surface);
+    color: var(--text);
     border: 1px solid var(--oc-border);
     border-radius: var(--radius-4);
     padding: 10px 15px;
     cursor: pointer;
+    transition: background var(--transition);
 }
 
 .refresh-btn:hover {
-    background: var(--oc-outline);
+    background: var(--bg-alt);
 }
 
-/* URLs List */
+/* ─── URLs List ─────────────────────────────────────────────────────────────── */
 .urls-list {
     max-height: 400px;
     overflow-y: auto;
@@ -634,11 +619,12 @@ button:focus-visible {
 }
 
 .url-item {
-    background: var(--oc-input-bg);
+    background: var(--input-bg);
     padding: 20px;
     border-radius: 15px;
     margin-bottom: 15px;
     border-left: 4px solid var(--oc-blue);
+    transition: border-left-color var(--transition);
 }
 
 .url-item:hover {
@@ -679,40 +665,42 @@ button:focus-visible {
 }
 
 .delete-btn {
-    background: var(--oc-dark);
-    color: var(--oc-light);
+    background: var(--surface);
+    color: var(--text);
     border: 1px solid var(--oc-border);
     padding: 8px 10px;
     border-radius: var(--radius-4);
     cursor: pointer;
     font-size: 0.9rem;
+    transition: all var(--transition);
 }
 
 .delete-btn:hover {
-    background: var(--oc-blue-hover);
+    background: var(--oc-danger);
+    color: var(--oc-light);
 }
 
 .url-original {
-    color: var(--oc-muted);
+    color: var(--text-muted);
     word-break: break-all;
     margin-bottom: 8px;
     font-size: 0.9rem;
 }
 
 .url-date {
-    color: var(--oc-gray);
+    color: var(--text-muted);
     font-size: 0.8rem;
 }
 
-/* Notifications */
+/* ─── Notifications ─────────────────────────────────────────────────────────────── */
 .notification {
     position: fixed;
     top: 30px;
     right: 30px;
     padding: 15px 25px;
     border-radius: var(--radius-4);
-    background: var(--oc-light);
-    color: var(--oc-dark);
+    background: var(--bg-alt);
+    color: var(--text);
     font-weight: 600;
     transform: translateX(500px);
     opacity: 0;
@@ -721,6 +709,10 @@ button:focus-visible {
     border: 1px solid var(--oc-border);
     max-width: 400px;
     word-wrap: break-word;
+    transition:
+        transform 0.3s ease,
+        opacity 0.3s ease,
+        visibility 0.3s ease;
 }
 
 .notification.show {
@@ -730,48 +722,24 @@ button:focus-visible {
 }
 
 .notification.success {
-    background: var(--oc-light);
+    background: var(--bg-alt);
     color: var(--oc-success);
     border: 2px solid var(--oc-success);
 }
 
 .notification.error {
-    background: var(--oc-light);
+    background: var(--bg-alt);
     color: var(--oc-danger);
     border: 2px solid var(--oc-danger);
 }
 
 .notification.warning {
-    background: var(--oc-light);
+    background: var(--bg-alt);
     color: var(--oc-warning);
     border: 2px solid var(--oc-warning);
 }
 
-/* Dark mode notifications */
-.notification.dark {
-    background: var(--oc-dark);
-    color: var(--oc-light);
-}
-
-.notification.dark.success {
-    background: var(--oc-dark);
-    color: var(--oc-success);
-    border: 2px solid var(--oc-success);
-}
-
-.notification.dark.error {
-    background: var(--oc-dark);
-    color: var(--oc-danger);
-    border: 2px solid var(--oc-danger);
-}
-
-.notification.dark.warning {
-    background: var(--oc-dark);
-    color: var(--oc-warning);
-    border: 2px solid var(--oc-warning);
-}
-
-/* QR Modal */
+/* ─── QR Modal ─────────────────────────────────────────────────────────────── */
 .qr-modal {
     position: fixed;
     top: 0;
@@ -787,14 +755,14 @@ button:focus-visible {
 }
 
 .qr-modal-content {
-    background: var(--oc-light);
+    background: var(--bg-alt);
     border-radius: 20px;
     max-width: 400px;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
     animation: slideIn 0.3s ease;
-    color: var(--oc-dark);
+    color: var(--text);
 }
 
 .qr-modal-header {
@@ -807,7 +775,7 @@ button:focus-visible {
 
 .qr-modal-header h3 {
     margin: 0;
-    color: var(--oc-dark);
+    color: var(--text);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -820,11 +788,11 @@ button:focus-visible {
     padding: 8px 10px;
     border-radius: 8px;
     cursor: pointer;
-    transition: background 0.3s ease;
+    transition: filter 0.3s ease;
 }
 
 .close-btn:hover {
-    background: var(--oc-dark);
+    filter: brightness(1.2);
 }
 
 .qr-modal-body {
@@ -848,7 +816,7 @@ button:focus-visible {
     word-break: break-all;
     margin: 15px 0;
     padding: 15px;
-    background: var(--oc-gray);
+    background: var(--surface);
     border-radius: 10px;
     border-left: 4px solid var(--oc-info);
 }
@@ -865,10 +833,14 @@ button:focus-visible {
     min-width: 120px;
 }
 
-/* Animations */
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes slideIn {
@@ -892,6 +864,7 @@ button:focus-visible {
         transform: translateY(-20px);
     }
 }
+
 @keyframes fadeInDown {
     from {
         opacity: 0;
@@ -947,57 +920,67 @@ button:focus-visible {
     }
 }
 
-/* Responsive Design */
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .app-container {
         padding: 15px;
     }
-    
+
     .header h1 {
         font-size: 2.5rem;
     }
-    
+
     .header p {
         font-size: 1rem;
     }
-    
+
     .result-container {
         flex-direction: column;
         justify-content: stretch;
     }
-    
+
     .qr-section {
         flex: none;
         width: 100%;
     }
-    
+
     .input-container {
         padding: 6px;
     }
-    
+
     .url-input {
         padding: 15px 20px;
         font-size: 1rem;
     }
-    
+
     .short-url-display {
         flex-direction: column;
         align-items: stretch;
         gap: 15px;
     }
-    
+
     .action-buttons {
         justify-content: center;
     }
-    
+
     .url-header {
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
     }
-    
+
     .url-actions {
         justify-content: flex-end;
+    }
+}
+
+@media (max-width: 640px) {
+    .brand h1 {
+        font-size: 24px;
+    }
+
+    .app-container {
+        padding: var(--space-5) var(--space-3);
     }
 }
 
@@ -1005,18 +988,20 @@ button:focus-visible {
     .header h1 {
         font-size: 2rem;
     }
-    
+
     .qr-image {
         width: 150px;
         height: 150px;
     }
-    
-    .result-main, .qr-section, .history-section {
+
+    .result-main,
+    .qr-section,
+    .history-section {
         padding: 20px;
     }
 }
 
-/* Hidden class */
+/* ─── Utilities ─────────────────────────────────────────────────────────────── */
 .hidden {
     display: none !important;
 }
