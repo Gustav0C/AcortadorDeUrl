@@ -1,0 +1,16 @@
+# robots.txt - Fis Url
+User-agent: *
+Allow: /
+
+# Block private API endpoints
+Disallow: /api/urls/
+Disallow: /api/user
+Disallow: /api/stats/
+Disallow: /api/qr/
+
+# Block Auth0 callbacks
+Disallow: /login
+Disallow: /logout
+Disallow: /callback
+
+Sitemap: https://fisurl.com/sitemap.xml

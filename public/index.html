@@ -1,124 +1,252 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fis Url</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-</head>
-<body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="brand">
-                    <h1><i class="fas fa-link"></i> Fis Url</h1>
-                    <p>Acorta tus URLs de forma simple y elegante</p>
-                </div>
-                <div class="auth-extra">
-                    <!-- Theme Toggle -->
-                    <button id="themeToggle" class="theme-toggle" title="Cambiar tema" aria-label="Cambiar entre modo claro y oscuro">
-                        <i class="fas fa-moon" id="themeIcon"></i>
-                    </button>
-                    <div class="auth-section" id="authSection">
-                        <!-- Se llenará dinámicamente -->
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Acortador de URLs Gratis | Fis Url - Acorta tus enlaces</title>
+        <meta
+            name="description"
+            content="Acorta tus URLs de forma rápido y segura con Fis Url. Genera códigos QR, historial personalizado y acceso desde cualquier dispositivo. 100% gratis."
+        />
+        <meta name="robots" content="index, follow" />
+        <meta
+            name="keywords"
+            content="acortador de urls, shorten url, acortar enlaces, url shortener, gratis, codigo qr"
+        />
+        <link rel="canonical" href="https://fis-url.vercel.app/" />
+
+        <!-- Open Graph -->
+        <meta property="og:type" content="website" />
+        <meta
+            property="og:title"
+            content="Acortador de URLs Gratis | Fis Url"
+        />
+        <meta
+            property="og:description"
+            content="Acorta tus URLs de forma rápida y segura. Genera códigos QR y accede desde cualquier dispositivo."
+        />
+        <meta property="og:url" content="https://fis-url.vercel.app/" />
+
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+            name="twitter:title"
+            content="Acortador de URLs Gratis | Fis Url"
+        />
+        <meta
+            name="twitter:description"
+            content="Acorta tus URLs de forma rápida y segura. Genera códigos QR y accede desde cualquier dispositivo."
+        />
+
+        <!-- Structured Data -->
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "WebApplication",
+                "name": "Fis Url",
+                "alternateName": "Acortador de URLs",
+                "description": "Acorta tus URLs de forma rápida y segura. Genera códigos QR, guarda tu historial y accede desde cualquier dispositivo.",
+                "url": "https://fis-url.vercel.app",
+                "applicationCategory": "UtilitiesApplication",
+                "operatingSystem": "All",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                },
+                "author": {
+                    "@type": "Organization",
+                    "name": "Fis Url",
+                    "url": "https://fis-url.vercel.app/"
+                }
+            }
+        </script>
+
+        <link rel="stylesheet" href="styles.css" />
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+            rel="stylesheet"
+        />
+        <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+    </head>
+    <body>
+        <!-- Skip Link -->
+        <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+        <div class="app-container" role="application" aria-label="Fis Url - Acortador de URLs">
+            <!-- Header -->
+            <header class="header" role="banner">
+                <div class="header-content">
+                    <div class="brand">
+                        <h1><i class="fas fa-link" aria-hidden="true"></i> Fis Url</h1>
+                        <p>Acorta tus URLs de forma simple y elegante</p>
+                    </div>
+                    <div class="auth-extra">
+                        <!-- Theme Toggle -->
+                        <button
+                            id="themeToggle"
+                            class="theme-toggle"
+                            title="Cambiar tema"
+                            aria-label="Cambiar entre modo claro y oscuro"
+                        >
+                            <i class="fas fa-moon" id="themeIcon" aria-hidden="true"></i>
+                        </button>
+                        <div class="auth-section" id="authSection" role="region" aria-label="Autenticación">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
                     </div>
                 </div>
-            </div>
-        </header>
+            </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Input Section -->
-            <section id="inputSection" class="input-section">
-                <div class="input-container">
-                    <input type="url" id="urlInput" placeholder="Pega aquí tu URL..." class="url-input" maxlength="10000">
-                    <button id="shortenBtn" onclick="shortenUrl()" class="shorten-btn">
-                        <i class="fas fa-compress-alt"></i>
-                    </button>
-                </div>
-            </section>
+            <!-- Main Content -->
+            <main id="main-content" class="main-content" role="main">
+                <!-- Input Section -->
+                <section id="inputSection" class="input-section" aria-labelledby="input-heading">
+                    <h2 id="input-heading" class="visually-hidden">Acortar URL</h2>
+                    <div class="input-container">
+                        <label for="urlInput" class="visually-hidden">Introduce la URL que deseas acortar</label>
+                        <input
+                            type="url"
+                            id="urlInput"
+                            placeholder="Pega aquí tu URL..."
+                            class="url-input"
+                            maxlength="10000"
+                            required
+                            aria-describedby="urlInput-hint"
+                        />
+                        <span id="urlInput-hint" class="visually-hidden">Introduce una URL válida (http:// o https://)</span>
+                        <button
+                            id="shortenBtn"
+                            onclick="shortenUrl()"
+                            class="shorten-btn"
+                            aria-label="Acortar URL"
+                        >
+                            <i class="fas fa-compress-alt" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </section>
 
-            <!-- Result Section -->
-            <section id="resultSection" class="result-section hidden">
-                <div class="result-container">
-                    <div class="result-main">
-                        <div class="short-url-display">
-                            <span id="shortUrl" class="short-url-text"></span>
-                            <div class="action-buttons">
-                                <button onclick="copyToClipboard()" class="copy-btn" title="Copiar">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                                <button onclick="generateQR()" class="qr-btn" title="Generar QR">
-                                    <i class="fas fa-qrcode"></i>
+                <!-- Result Section -->
+                <section id="resultSection" class="result-section hidden" aria-labelledby="result-heading" aria-live="polite">
+                    <h2 id="result-heading" class="visually-hidden">Resultado</h2>
+                    <div class="result-container">
+                        <div class="result-main">
+                            <div class="short-url-display">
+                                <span
+                                    id="shortUrl"
+                                    class="short-url-text"
+                                ></span>
+                                <div class="action-buttons" role="group" aria-label="Opciones">
+                                    <button
+                                        onclick="copyToClipboard()"
+                                        class="copy-btn"
+                                        title="Copiar"
+                                        aria-label="Copiar URL al portapapeles"
+                                    >
+                                        <i class="fas fa-copy" aria-hidden="true"></i>
+                                    </button>
+                                    <button
+                                        onclick="generateQR()"
+                                        class="qr-btn"
+                                        title="Generar QR"
+                                        aria-label="Generar código QR"
+                                    >
+                                        <i class="fas fa-qrcode" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button
+                                onclick="createAnother()"
+                                class="new-url-btn"
+                            >
+                                <i class="fas fa-plus" aria-hidden="true"></i> Crear otra
+                            </button>
+                        </div>
+
+                        <!-- QR Section -->
+                        <div id="qrSection" class="qr-section hidden" aria-label="Código QR generado">
+                            <div class="qr-container">
+                                <img
+                                    id="qrImage"
+                                    alt="Código QR de la URL acortada"
+                                    class="qr-image"
+                                />
+                                <button
+                                    onclick="downloadQR()"
+                                    class="download-btn"
+                                    aria-label="Descargar código QR"
+                                >
+                                    <i class="fas fa-download" aria-hidden="true"></i> Descargar
                                 </button>
                             </div>
                         </div>
-                        <button onclick="createAnother()" class="new-url-btn">
-                            <i class="fas fa-plus"></i> Crear otra
+                    </div>
+                </section>
+
+                <!-- History Toggle -->
+                <div class="history-toggle">
+                    <button onclick="toggleHistory()" class="toggle-btn" aria-expanded="false" aria-controls="historySection">
+                        <i class="fas fa-history" aria-hidden="true"></i> Ver historial
+                    </button>
+                </div>
+
+                <!-- History Section -->
+                <section id="historySection" class="history-section hidden" aria-labelledby="history-heading">
+                    <h2 id="history-heading" class="visually-hidden">Historial de URLs creadas</h2>
+                    <div class="history-header">
+                        <h3><i class="fas fa-list" aria-hidden="true"></i> URLs Creadas</h3>
+                        <button onclick="loadUrls()" class="refresh-btn" aria-label="Actualizar historial">
+                            <i class="fas fa-sync-alt" aria-hidden="true"></i>
                         </button>
                     </div>
-                    
-                    <!-- QR Section -->
-                    <div id="qrSection" class="qr-section hidden">
-                        <div class="qr-container">
-                            <img id="qrImage" alt="Código QR" class="qr-image" />
-                            <button onclick="downloadQR()" class="download-btn">
-                                <i class="fas fa-download"></i> Descargar
+                    <div id="urlsList" class="urls-list" role="list" aria-label="Lista de URLs"></div>
+                </section>
+
+                <!-- Login Promotion for Anonymous Users -->
+                <section id="loginPromotion" class="login-promotion hidden" aria-labelledby="promo-heading">
+                    <h2 id="promo-heading" class="visually-hidden">Ventajas de iniciar sesión</h2>
+                    <div class="promo-card">
+                        <div class="promo-icon" aria-hidden="true">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="promo-content">
+                            <h3>¡Obtén más beneficios!</h3>
+                            <p>Inicia sesión para:</p>
+                            <ul>
+                                <li>
+                                    <i class="fas fa-history" aria-hidden="true"></i> Guardar tu
+                                    historial de URLs
+                                </li>
+                                <li>
+                                    <i class="fas fa-chart-bar" aria-hidden="true"></i> Ver
+                                    estadísticas detalladas
+                                </li>
+                                <li>
+                                    <i class="fas fa-edit" aria-hidden="true"></i> Gestionar y
+                                    eliminar tus URLs
+                                </li>
+                                <li>
+                                    <i class="fas fa-cloud" aria-hidden="true"></i> Acceder desde
+                                    cualquier dispositivo
+                                </li>
+                            </ul>
+                            <button
+                                onclick="window.location.href = '/login'"
+                                class="promo-login-btn"
+                            >
+                                <i class="fas fa-sign-in-alt" aria-hidden="true"></i> Iniciar
+                                Sesión
                             </button>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            </main>
+        </div>
 
-            <!-- History Toggle -->
-            <div class="history-toggle">
-                <button onclick="toggleHistory()" class="toggle-btn">
-                    <i class="fas fa-history"></i> Ver historial
-                </button>
-            </div>
+        <!-- Notifications - Live Region -->
+        <div id="notification" class="notification" role="status" aria-live="polite" aria-atomic="true"></div>
 
-            <!-- History Section -->
-            <section id="historySection" class="history-section hidden">
-                <div class="history-header">
-                    <h3><i class="fas fa-list"></i> URLs Creadas</h3>
-                    <button onclick="loadUrls()" class="refresh-btn">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
-                <div id="urlsList" class="urls-list"></div>
-            </section>
-
-            <!-- Login Promotion for Anonymous Users -->
-            <section id="loginPromotion" class="login-promotion hidden">
-                <div class="promo-card">
-                    <div class="promo-icon">
-                        <i class="fas fa-star"></i>
-                    </div>
-                    <div class="promo-content">
-                        <h3>¡Obtén más beneficios!</h3>
-                        <p>Inicia sesión para:</p>
-                        <ul>
-                            <li><i class="fas fa-history"></i> Guardar tu historial de URLs</li>
-                            <li><i class="fas fa-chart-bar"></i> Ver estadísticas detalladas</li>
-                            <li><i class="fas fa-edit"></i> Gestionar y eliminar tus URLs</li>
-                            <li><i class="fas fa-cloud"></i> Acceder desde cualquier dispositivo</li>
-                        </ul>
-                        <button onclick="window.location.href='/login'" class="promo-login-btn">
-                            <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-                        </button>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <!-- Notifications -->
-    <div id="notification" class="notification"></div>
-
-    <script src="js/utils.js"></script>
-    <script src="script.js"></script>
-</body>
+        <script src="js/utils.js"></script>
+        <script src="script.js"></script>
+    </body>
 </html>

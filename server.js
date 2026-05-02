@@ -290,7 +290,6 @@ app.get('/api/user', (req, res) => {
     }
 
     if (req.oidc && req.oidc.isAuthenticated()) {
-        console.log('Usuario autenticado:', req.oidc.user); // Debug
         res.json({
             isAuthenticated: true,
             auth0Configured: true,
@@ -621,11 +620,22 @@ app.get('/:shortCode', async (req, res) => {
         }
 
         // Prevenir open redirect - solo permitir http y https
-        const originalUrl = row.original_url;
+        let originalUrl = row.original_url;
+        
+        // Normalizar para detectar protocolos maliciosos
+        originalUrl = normalizeUrl(originalUrl);
+        
         try {
             const urlObj = new URL(originalUrl);
             if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
                 console.error('⚠️ Intento de open redirect bloqueado:', originalUrl);
+                return res.status(400).send('URL no válida');
+            }
+            
+            // Prevenir URLs que apuntan al mismo host (open redirect interno)
+            const baseUrlObj = new URL(getBaseUrl(req));
+            if (urlObj.hostname === baseUrlObj.hostname) {
+                console.error('⚠️ Intento de open redirect interno bloqueado:', originalUrl);
                 return res.status(400).send('URL no válida');
             }
         } catch (e) {

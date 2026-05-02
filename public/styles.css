@@ -1005,3 +1005,73 @@ a:hover {
 .hidden {
     display: none !important;
 }
+
+/* ─── Accessibility ─────────────────────────────────────────────────────────────── */
+/* Visually hidden - available for screen readers */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Skip Link */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--oc-dark);
+    color: var(--oc-light);
+    padding: 8px 16px;
+    z-index: 1000;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: var(--radius-4);
+    transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+    top: 10px;
+    left: 10px;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Minimum touch targets (44x44 per WCAG AA) */
+button,
+[role="button"],
+.toggle-btn,
+.copy-btn,
+.qr-btn,
+.delete-btn,
+.refresh-btn,
+.download-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Focus visible */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--oc-blue);
+    outline-offset: 2px;
+}
